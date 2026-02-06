@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skimage-cucim-backend"
+version = "0.1.0"
+description = "CuCIM backend for scikit-image dispatching"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "scikit-image",
+    "cucim",
+]
+
+[project.entry-points.skimage_backend_infos]
+# Fast: returns backend metadata; must avoid heavy imports.
+cucim = "skimage_cucim_backend.information:info"
+
+[project.entry-points.skimage_backends]
+# Namespace with can_has and get_implementation; may be slow to import.
+cucim = "skimage_cucim_backend.implementations"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["skimage_cucim_backend*"]

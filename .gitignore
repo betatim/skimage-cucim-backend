@@ -1,0 +1,5 @@
+.cache
+__pycache__
+*.pyc
+.DS_Store
+skimage_cucim_backend.egg-info
