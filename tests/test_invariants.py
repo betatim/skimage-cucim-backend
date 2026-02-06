@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from skimage_cucim_backend._testing import identity_map
 from skimage_cucim_backend.implementations import can_has, get_implementation
 from skimage_cucim_backend.information import SUPPORTED_FUNCTIONS
 
@@ -22,6 +23,9 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
     if module_path == "transform":
         import skimage.transform as mod
         func = getattr(mod, func_name)
+        if func_name == "integrate":
+            ii = mod.integral_image(np_arrays[0])
+            return func(ii, *args, **kwargs)
         return func(np_arrays[0], *args, **kwargs)
     raise LookupError(f"No reference implementation for: {name}")
 
@@ -58,6 +62,15 @@ TRANSFORM_INVARIANT_CALL_PARAMS = [
     ("skimage.transform:resize", ((10, 10),), {}),
     ("skimage.transform:rescale", (0.5,), {}),
     ("skimage.transform:rotate", (45,), {}),
+    ("skimage.transform:warp", (identity_map,), {"output_shape": (7, 7)}),
+    ("skimage.transform:resize_local_mean", ((4, 4),), {}),
+    ("skimage.transform:downscale_local_mean", ((2, 2),), {}),
+    ("skimage.transform:integral_image", (), {}),
+    ("skimage.transform:integrate", ([(0, 0)], [(1, 1)]), {}),
+    ("skimage.transform:pyramid_reduce", (), {}),
+    ("skimage.transform:pyramid_expand", (), {}),
+    ("skimage.transform:swirl", (), {}),
+    ("skimage.transform:warp_polar", (), {"output_shape": (7, 7)}),
 ]
 
 def test_all_supported_functions_covered_in_invariant_call_params():
@@ -124,6 +137,9 @@ def test_invariant_shape_match_array_result(name, args, kwargs, cupy, minimal_cu
     expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
 
     impl = get_implementation(name)
+    if name == "skimage.transform:integrate":
+        impl_ii = get_implementation("skimage.transform:integral_image")
+        a = impl_ii(a)
     result = impl(a, *args, **kwargs)
     assert isinstance(result, cupy.ndarray)
     assert result.shape == expected_shape

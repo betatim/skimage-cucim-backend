@@ -11,6 +11,15 @@ SUPPORTED_FUNCTIONS = [
     "skimage.transform:resize",
     "skimage.transform:rescale",
     "skimage.transform:rotate",
+    "skimage.transform:warp",
+    "skimage.transform:resize_local_mean",
+    "skimage.transform:downscale_local_mean",
+    "skimage.transform:integral_image",
+    "skimage.transform:integrate",
+    "skimage.transform:pyramid_reduce",
+    "skimage.transform:pyramid_expand",
+    "skimage.transform:swirl",
+    "skimage.transform:warp_polar",
 ]
 
 

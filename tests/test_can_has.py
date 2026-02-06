@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from skimage_cucim_backend._testing import identity_map
 from skimage_cucim_backend.implementations import can_has
 from skimage_cucim_backend.information import SUPPORTED_FUNCTIONS
 
@@ -30,6 +31,24 @@ CAN_HAS_PARAMS = [
     ("skimage.transform:rescale", False, False, {}, (0.5,)),
     ("skimage.transform:rotate", True, True, {}, (45,)),
     ("skimage.transform:rotate", False, False, {}, (45,)),
+    ("skimage.transform:warp", True, True, {"output_shape": (7, 7)}, (identity_map,)),
+    ("skimage.transform:warp", False, False, {"output_shape": (7, 7)}, (identity_map,)),
+    ("skimage.transform:resize_local_mean", True, True, {}, ((4, 4),)),
+    ("skimage.transform:resize_local_mean", False, False, {}, ((4, 4),)),
+    ("skimage.transform:downscale_local_mean", True, True, {}, ((2, 2),)),
+    ("skimage.transform:downscale_local_mean", False, False, {}, ((2, 2),)),
+    ("skimage.transform:integral_image", True, True, {}, ()),
+    ("skimage.transform:integral_image", False, False, {}, ()),
+    ("skimage.transform:integrate", True, True, {}, ([(0, 0)], [(1, 1)])),
+    ("skimage.transform:integrate", False, False, {}, ([(0, 0)], [(1, 1)])),
+    ("skimage.transform:pyramid_reduce", True, True, {}, ()),
+    ("skimage.transform:pyramid_reduce", False, False, {}, ()),
+    ("skimage.transform:pyramid_expand", True, True, {}, ()),
+    ("skimage.transform:pyramid_expand", False, False, {}, ()),
+    ("skimage.transform:swirl", True, True, {}, ()),
+    ("skimage.transform:swirl", False, False, {}, ()),
+    ("skimage.transform:warp_polar", True, True, {"output_shape": (7, 7)}, ()),
+    ("skimage.transform:warp_polar", False, False, {"output_shape": (7, 7)}, ()),
 ]
 
 
