@@ -7,6 +7,8 @@ SUPPORTED_FUNCTIONS = [
     "skimage.metrics:normalized_root_mse",
     "skimage.metrics:peak_signal_noise_ratio",
     "skimage.metrics:structural_similarity",
+    "skimage.metrics:normalized_mutual_information",
+    "skimage.transform:resize",
 ]
 
 

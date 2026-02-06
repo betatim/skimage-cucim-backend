@@ -33,3 +33,8 @@ def structural_similarity(
         channel_axis=channel_axis, gaussian_weights=gaussian_weights,
         full=full, **kwargs
     )
+
+
+def normalized_mutual_information(image0, image1, *, bins=100):
+    """CuCIM-backed normalized_mutual_information; same signature as skimage.metrics.normalized_mutual_information."""
+    return cucim_metrics.normalized_mutual_information(image0, image1, bins=bins)

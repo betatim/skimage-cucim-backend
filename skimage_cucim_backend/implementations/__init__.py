@@ -55,9 +55,10 @@ def get_implementation(name):
     # Parse "skimage.metrics:mean_squared_error" -> module path + func name
     _, rest = name.split(".", maxsplit=1)
     module_path, func_name = rest.rsplit(":", maxsplit=1)
-    # We only have metrics for now
     if module_path == "metrics":
         mod = importlib.import_module("skimage_cucim_backend.implementations.metrics")
+    elif module_path == "transform":
+        mod = importlib.import_module("skimage_cucim_backend.implementations.transform")
     else:
         raise LookupError(f"No implementation for module path: {module_path}")
     func = getattr(mod, func_name, None)
