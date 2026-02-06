@@ -12,8 +12,9 @@ METRIC_CALL_PARAMS = [
     ("skimage.metrics:normalized_root_mse", (), {"normalization": "euclidean"}),
     ("skimage.metrics:peak_signal_noise_ratio", (), {}),
     ("skimage.metrics:peak_signal_noise_ratio", (), {"data_range": 1.0}),
-    ("skimage.metrics:structural_similarity", (), {}),
+    # structural_similarity: pass data_range explicitly (recommended for float images in both skimage and CuCIM)
     ("skimage.metrics:structural_similarity", (), {"data_range": 1.0}),
+    ("skimage.metrics:structural_similarity", (), {"data_range": 1.0, "win_size": 7}),
 ]
 
 
@@ -28,9 +29,11 @@ def test_get_implementation_returns_callable(name):
 @pytest.mark.parametrize("name,args,kwargs", METRIC_CALL_PARAMS)
 def test_metric_returns_0dim_cupy_array(name, args, kwargs, cupy, require_cuda):
     """Backend metrics with CuPy inputs return a 0-dim CuPy array."""
+    import numpy as np
     impl = get_implementation(name)
-    a = cupy.array([[0.0, 0.5], [0.2, 0.8]], dtype=cupy.float64)
-    b = cupy.array([[0.1, 0.4], [0.3, 0.9]], dtype=cupy.float64)
+    rng = np.random.default_rng(42)
+    a = cupy.array(rng.random((7, 7), dtype=np.float64))
+    b = cupy.array(rng.random((7, 7), dtype=np.float64))
     result = impl(a, b, *args, **kwargs)
     assert isinstance(result, cupy.ndarray) and result.ndim == 0
 

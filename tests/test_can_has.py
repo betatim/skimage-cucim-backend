@@ -16,9 +16,8 @@ CAN_HAS_PARAMS = [
     ("skimage.metrics:peak_signal_noise_ratio", True, True, {}),
     ("skimage.metrics:peak_signal_noise_ratio", False, False, {}),
     ("skimage.metrics:peak_signal_noise_ratio", True, True, {"data_range": 1.0}),
-    ("skimage.metrics:structural_similarity", True, True, {}),
-    ("skimage.metrics:structural_similarity", False, False, {}),
     ("skimage.metrics:structural_similarity", True, True, {"data_range": 1.0}),
+    ("skimage.metrics:structural_similarity", False, False, {}),
     ("skimage.metrics:unknown", True, False, {}),
     ("skimage.metrics:unknown", False, False, {}),
 ]

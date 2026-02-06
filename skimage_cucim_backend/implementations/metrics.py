@@ -1,5 +1,6 @@
 """Thin wrappers that forward to cucim.skimage.metrics."""
 
+import cupy as cp
 import cucim.skimage.metrics as cucim_metrics
 
 

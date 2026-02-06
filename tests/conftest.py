@@ -40,7 +40,9 @@ def require_cuda():
 
 @pytest.fixture
 def minimal_cupy_arrays_2d(cupy, require_cuda):
-    """Minimal 2D CuPy arrays for metrics (same shape). Skip if CUDA runtime unavailable."""
-    return cupy.array([[0.0, 0.5], [0.2, 0.8]], dtype=cupy.float64), cupy.array(
-        [[0.1, 0.4], [0.3, 0.9]], dtype=cupy.float64
-    )
+    """2D CuPy arrays for metrics (same shape). 7x7 so structural_similarity default win_size=7 works."""
+    import numpy as np
+    rng = np.random.default_rng(42)
+    a = cupy.array(rng.random((7, 7), dtype=np.float64))
+    b = cupy.array(rng.random((7, 7), dtype=np.float64))
+    return a, b

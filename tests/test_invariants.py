@@ -20,9 +20,9 @@ INVARIANT_CALL_PARAMS = [
     # peak_signal_noise_ratio: data_range optional
     ("skimage.metrics:peak_signal_noise_ratio", (), {}),
     ("skimage.metrics:peak_signal_noise_ratio", (), {"data_range": 1.0}),
-    # structural_similarity: default full=False -> scalar; data_range optional
-    ("skimage.metrics:structural_similarity", (), {}),
+    # structural_similarity: pass data_range explicitly (recommended for float images in both skimage and CuCIM)
     ("skimage.metrics:structural_similarity", (), {"data_range": 1.0}),
+    ("skimage.metrics:structural_similarity", (), {"data_range": 1.0, "win_size": 7}),
 ]
 
 def test_all_supported_functions_covered_in_invariant_call_params():
