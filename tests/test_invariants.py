@@ -56,6 +56,7 @@ INVARIANT_CALL_PARAMS = [
 # (name, args, kwargs) for transform functions: call impl(image, *args, **kwargs); returns array.
 TRANSFORM_INVARIANT_CALL_PARAMS = [
     ("skimage.transform:resize", ((10, 10),), {}),
+    ("skimage.transform:rescale", (0.5,), {}),
 ]
 
 def test_all_supported_functions_covered_in_invariant_call_params():

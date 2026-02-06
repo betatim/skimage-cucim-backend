@@ -26,6 +26,8 @@ CAN_HAS_PARAMS = [
     ("skimage.metrics:unknown", False, False, {}, None),
     ("skimage.transform:resize", True, True, {}, ((10, 10),)),
     ("skimage.transform:resize", False, False, {}, ((10, 10),)),
+    ("skimage.transform:rescale", True, True, {}, (0.5,)),
+    ("skimage.transform:rescale", False, False, {}, (0.5,)),
 ]
 
 

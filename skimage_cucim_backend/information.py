@@ -9,6 +9,7 @@ SUPPORTED_FUNCTIONS = [
     "skimage.metrics:structural_similarity",
     "skimage.metrics:normalized_mutual_information",
     "skimage.transform:resize",
+    "skimage.transform:rescale",
 ]
 
 

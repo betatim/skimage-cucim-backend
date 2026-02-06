@@ -22,8 +22,10 @@ METRIC_CALL_PARAMS = [
 ]
 
 # (name, args, kwargs, expected_shape) for transform functions that return arrays.
+# rescale(7x7 image, 0.5) -> (4, 4)
 TRANSFORM_CALL_PARAMS = [
     ("skimage.transform:resize", ((10, 10),), {}, (10, 10)),
+    ("skimage.transform:rescale", (0.5,), {}, (4, 4)),
 ]
 
 
