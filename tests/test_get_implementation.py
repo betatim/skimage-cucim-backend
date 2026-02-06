@@ -26,6 +26,7 @@ METRIC_CALL_PARAMS = [
 TRANSFORM_CALL_PARAMS = [
     ("skimage.transform:resize", ((10, 10),), {}, (10, 10)),
     ("skimage.transform:rescale", (0.5,), {}, (4, 4)),
+    ("skimage.transform:rotate", (45,), {}, (7, 7)),
 ]
 
 

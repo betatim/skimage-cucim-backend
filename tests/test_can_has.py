@@ -28,6 +28,8 @@ CAN_HAS_PARAMS = [
     ("skimage.transform:resize", False, False, {}, ((10, 10),)),
     ("skimage.transform:rescale", True, True, {}, (0.5,)),
     ("skimage.transform:rescale", False, False, {}, (0.5,)),
+    ("skimage.transform:rotate", True, True, {}, (45,)),
+    ("skimage.transform:rotate", False, False, {}, (45,)),
 ]
 
 

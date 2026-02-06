@@ -54,3 +54,28 @@ def rescale(
         anti_aliasing_sigma=anti_aliasing_sigma,
         channel_axis=channel_axis,
     )
+
+
+def rotate(
+    image,
+    angle,
+    resize=False,
+    center=None,
+    order=None,
+    mode='constant',
+    cval=0,
+    clip=True,
+    preserve_range=False,
+):
+    """CuCIM-backed rotate; same signature as skimage.transform.rotate."""
+    return cucim_transform.rotate(
+        image,
+        angle,
+        resize=resize,
+        center=center,
+        order=order,
+        mode=mode,
+        cval=cval,
+        clip=clip,
+        preserve_range=preserve_range,
+    )

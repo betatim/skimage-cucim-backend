@@ -57,6 +57,7 @@ INVARIANT_CALL_PARAMS = [
 TRANSFORM_INVARIANT_CALL_PARAMS = [
     ("skimage.transform:resize", ((10, 10),), {}),
     ("skimage.transform:rescale", (0.5,), {}),
+    ("skimage.transform:rotate", (45,), {}),
 ]
 
 def test_all_supported_functions_covered_in_invariant_call_params():

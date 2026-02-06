@@ -10,6 +10,7 @@ SUPPORTED_FUNCTIONS = [
     "skimage.metrics:normalized_mutual_information",
     "skimage.transform:resize",
     "skimage.transform:rescale",
+    "skimage.transform:rotate",
 ]
 
 
