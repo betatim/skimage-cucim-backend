@@ -78,9 +78,9 @@ def _make_image_and_template(seed, xp):
 
 
 def _make_binary_image(seed, xp):
-    """One binary image (7, 7) for morphology (bool or uint8 0/1)."""
+    """One binary image (7, 7) for morphology (boolean mask)."""
     rng = np.random.default_rng(seed)
-    im = xp.asarray((rng.random((7, 7)) > 0.5).astype(np.uint8))
+    im = xp.asarray((rng.random((7, 7)) > 0.5))
     return (im,)
 
 
@@ -181,14 +181,24 @@ EXPOSURE_TWO_ARRAY_CALLABLES = [
     ("match_histograms", partial(_exposure.match_histograms)),
 ]
 
-# Morphology (binary + misc): f(ar) -> result; requires binary/labeled input.
+# Morphology (binary input + misc): f(ar) -> result; uses boolean image (erosion/dilation/opening/closing, remove_small_*).
 MORPHOLOGY_CALLABLES = [
-    ("binary_erosion", partial(_morphology.binary_erosion)),
-    ("binary_dilation", partial(_morphology.binary_dilation)),
-    ("binary_opening", partial(_morphology.binary_opening)),
-    ("binary_closing", partial(_morphology.binary_closing)),
+    ("erosion", partial(_morphology.erosion)),
+    ("dilation", partial(_morphology.dilation)),
+    ("opening", partial(_morphology.opening)),
+    ("closing", partial(_morphology.closing)),
     ("remove_small_objects", partial(_morphology.remove_small_objects)),
     ("remove_small_holes", partial(_morphology.remove_small_holes)),
+]
+
+# Morphology (gray): f(image) -> result; uses float image.
+GRAY_MORPHOLOGY_CALLABLES = [
+    ("erosion", partial(_morphology.erosion)),
+    ("dilation", partial(_morphology.dilation)),
+    ("opening", partial(_morphology.opening)),
+    ("closing", partial(_morphology.closing)),
+    ("white_tophat", partial(_morphology.white_tophat)),
+    ("black_tophat", partial(_morphology.black_tophat)),
 ]
 
 # Callables that don't unwrap to a single skimage function (lambda, wrapper); map scenario_id -> dispatch name.
@@ -229,6 +239,10 @@ def _numerical_equivalence_covered_dispatch_names():
         if name:
             covered.add(name)
     for _scenario_id, func in MORPHOLOGY_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in GRAY_MORPHOLOGY_CALLABLES:
         name = _dispatch_name_from_callable(func)
         if name:
             covered.add(name)
@@ -323,6 +337,24 @@ def test_numerical_equivalence_f_im_morphology(scenario_id, func, cupy, require_
     """NumPy vs CuPy (dispatched) numerical equivalence for morphology f(ar)."""
     np_arrays = _make_binary_image(_SEED, np)
     cp_arrays = _make_binary_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    GRAY_MORPHOLOGY_CALLABLES,
+    ids=[p[0] for p in GRAY_MORPHOLOGY_CALLABLES],
+)
+def test_numerical_equivalence_f_im_gray_morphology(
+    scenario_id, func, cupy, require_cuda
+):
+    """NumPy vs CuPy (dispatched) numerical equivalence for gray morphology f(im)."""
+    np_arrays = _make_one_image(_SEED, np)
+    cp_arrays = _make_one_image(_SEED, cupy)
     ref = func(*np_arrays)
     out = func(*cp_arrays)
     _assert_result_is_cupy(out, cupy)

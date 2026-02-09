@@ -50,12 +50,14 @@ FILTERS_CALL_PARAMS = [
 
 # (name, args, kwargs, expected_shape) for morphology functions (all return same shape as input (7,7)).
 MORPHOLOGY_CALL_PARAMS = [
-    ("skimage.morphology:binary_erosion", (), {}, (7, 7)),
-    ("skimage.morphology:binary_dilation", (), {}, (7, 7)),
-    ("skimage.morphology:binary_opening", (), {}, (7, 7)),
-    ("skimage.morphology:binary_closing", (), {}, (7, 7)),
+    ("skimage.morphology:erosion", (), {}, (7, 7)),
+    ("skimage.morphology:dilation", (), {}, (7, 7)),
+    ("skimage.morphology:opening", (), {}, (7, 7)),
+    ("skimage.morphology:closing", (), {}, (7, 7)),
     ("skimage.morphology:remove_small_objects", (), {}, (7, 7)),
     ("skimage.morphology:remove_small_holes", (), {}, (7, 7)),
+    ("skimage.morphology:white_tophat", (), {}, (7, 7)),
+    ("skimage.morphology:black_tophat", (), {}, (7, 7)),
 ]
 
 # (name, args, kwargs, expected_shape) for exposure functions (all return same shape as image (7,7)).
@@ -160,8 +162,12 @@ def test_morphology_returns_cupy_array(
     """Backend morphology with CuPy input returns CuPy ndarray with expected shape."""
     impl = get_implementation(name)
     rng = np.random.default_rng(42)
-    # Binary or small-integer array for morphology
-    image = cupy.array((rng.random((7, 7)) > 0.5).astype(np.uint8))
+    # Boolean for erosion/dilation/opening/closing/remove_small_*; float for white_tophat/black_tophat
+    gray_float_only = ("white_tophat", "black_tophat")
+    if any(g in name for g in gray_float_only):
+        image = cupy.array(rng.random((7, 7), dtype=np.float64))
+    else:
+        image = cupy.array((rng.random((7, 7)) > 0.5), dtype=bool)
     result = impl(image, *args, **kwargs)
     assert isinstance(result, cupy.ndarray)
     assert result.shape == expected_shape

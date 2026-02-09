@@ -106,16 +106,23 @@ FILTER_INVARIANT_CALL_PARAMS = [
     ("skimage.filters:unsharp_mask", (), {}),
 ]
 
-# (name, args, kwargs) for morphology functions: call impl(ar, *args, **kwargs).
+# (name, args, kwargs, use_float_input) for morphology: call impl(ar, *args, **kwargs).
+# use_float_input: False = boolean image (binary/mask), True = float image (gray).
 MORPHOLOGY_INVARIANT_CALL_PARAMS = [
-    ("skimage.morphology:binary_erosion", (), {}),
-    ("skimage.morphology:binary_dilation", (), {}),
-    ("skimage.morphology:binary_opening", (), {}),
-    ("skimage.morphology:binary_closing", (), {}),
-    ("skimage.morphology:remove_small_objects", (), {}),
-    ("skimage.morphology:remove_small_objects", (), {"max_size": 10}),
-    ("skimage.morphology:remove_small_holes", (), {}),
-    ("skimage.morphology:remove_small_holes", (), {"max_size": 10}),
+    ("skimage.morphology:erosion", (), {}, False),
+    ("skimage.morphology:dilation", (), {}, False),
+    ("skimage.morphology:opening", (), {}, False),
+    ("skimage.morphology:closing", (), {}, False),
+    ("skimage.morphology:remove_small_objects", (), {}, False),
+    ("skimage.morphology:remove_small_objects", (), {"max_size": 10}, False),
+    ("skimage.morphology:remove_small_holes", (), {}, False),
+    ("skimage.morphology:remove_small_holes", (), {"max_size": 10}, False),
+    ("skimage.morphology:erosion", (), {}, True),
+    ("skimage.morphology:dilation", (), {}, True),
+    ("skimage.morphology:opening", (), {}, True),
+    ("skimage.morphology:closing", (), {}, True),
+    ("skimage.morphology:white_tophat", (), {}, True),
+    ("skimage.morphology:black_tophat", (), {}, True),
 ]
 
 # (name, args, kwargs) for exposure functions: call impl(image, *args, **kwargs) or impl(image, reference, ...).
@@ -165,7 +172,7 @@ def test_all_supported_functions_covered_in_invariant_call_params():
     param_names = (
         {name for name, _, _ in INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in FILTER_INVARIANT_CALL_PARAMS}
-        | {name for name, _, _ in MORPHOLOGY_INVARIANT_CALL_PARAMS}
+        | {name for name, *_ in MORPHOLOGY_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in EXPOSURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in FEATURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in TRANSFORM_INVARIANT_CALL_PARAMS}
@@ -217,10 +224,15 @@ def test_invariant_no_numpy_filter(name, args, kwargs):
         assert not can_has(name, image, *args, **kwargs)
 
 
-@pytest.mark.parametrize("name,args,kwargs", MORPHOLOGY_INVARIANT_CALL_PARAMS)
-def test_invariant_no_numpy_morphology(name, args, kwargs):
+@pytest.mark.parametrize(
+    "name,args,kwargs,use_float_input", MORPHOLOGY_INVARIANT_CALL_PARAMS
+)
+def test_invariant_no_numpy_morphology(name, args, kwargs, use_float_input):
     """can_has returns False for NumPy array inputs (morphology)."""
-    image = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+    if use_float_input:
+        image = np.array([[0.0, 0.5], [0.2, 0.8]], dtype=np.float64)
+    else:
+        image = np.array([[False, True], [True, True]], dtype=bool)
     assert not can_has(name, image, *args, **kwargs)
 
 
@@ -312,16 +324,19 @@ def test_invariant_shape_match_filter_result(
 
 
 @pytest.mark.cupy
-@pytest.mark.parametrize("name,args,kwargs", MORPHOLOGY_INVARIANT_CALL_PARAMS)
+@pytest.mark.parametrize(
+    "name,args,kwargs,use_float_input", MORPHOLOGY_INVARIANT_CALL_PARAMS
+)
 def test_invariant_shape_match_morphology_result(
-    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+    name, args, kwargs, use_float_input, cupy, minimal_cupy_arrays_2d
 ):
     """Backend return shape/ndim matches scikit-image for morphology output."""
     impl = get_implementation(name)
     a, _ = minimal_cupy_arrays_2d
-    # Morphology expects binary or int; use 0/1 from float
-    np_a = np.asarray(cupy.asnumpy(a))
-    np_a = (np_a > 0.5).astype(np.uint8)
+    if use_float_input:
+        np_a = np.asarray(cupy.asnumpy(a)).astype(np.float64)
+    else:
+        np_a = (np.asarray(cupy.asnumpy(a)) > 0.5).astype(bool)
     ref = _skimage_reference_result(name, (np_a,), args, kwargs)
     expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
     cp_a = cupy.array(np_a)

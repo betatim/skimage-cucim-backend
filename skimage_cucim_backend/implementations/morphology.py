@@ -6,46 +6,6 @@ import cucim.skimage.morphology as cucim_morphology
 _MISSING = object()
 
 
-def binary_erosion(image, footprint=None, out=None, *, mode="ignore"):
-    """CuCIM-backed binary_erosion; same signature as skimage.morphology.binary_erosion."""
-    return cucim_morphology.binary_erosion(
-        image,
-        footprint=footprint,
-        out=out,
-        mode=mode,
-    )
-
-
-def binary_dilation(image, footprint=None, out=None, *, mode="ignore"):
-    """CuCIM-backed binary_dilation; same signature as skimage.morphology.binary_dilation."""
-    return cucim_morphology.binary_dilation(
-        image,
-        footprint=footprint,
-        out=out,
-        mode=mode,
-    )
-
-
-def binary_opening(image, footprint=None, out=None, *, mode="ignore"):
-    """CuCIM-backed binary_opening; same signature as skimage.morphology.binary_opening."""
-    return cucim_morphology.binary_opening(
-        image,
-        footprint=footprint,
-        out=out,
-        mode=mode,
-    )
-
-
-def binary_closing(image, footprint=None, out=None, *, mode="ignore"):
-    """CuCIM-backed binary_closing; same signature as skimage.morphology.binary_closing."""
-    return cucim_morphology.binary_closing(
-        image,
-        footprint=footprint,
-        out=out,
-        mode=mode,
-    )
-
-
 def remove_small_objects(
     ar, min_size=_MISSING, connectivity=1, *, max_size=63, out=None
 ):
@@ -79,4 +39,70 @@ def remove_small_holes(
         area_threshold=cucim_area_threshold,
         connectivity=connectivity,
         out=out,
+    )
+
+
+def erosion(image, footprint=None, out=None, *, mode="reflect", cval=0.0):
+    """CuCIM-backed erosion; same signature as skimage.morphology.erosion."""
+    return cucim_morphology.erosion(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
+    )
+
+
+def dilation(image, footprint=None, out=None, *, mode="reflect", cval=0.0):
+    """CuCIM-backed dilation; same signature as skimage.morphology.dilation."""
+    return cucim_morphology.dilation(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
+    )
+
+
+def opening(image, footprint=None, out=None, *, mode="reflect", cval=0.0):
+    """CuCIM-backed opening; same signature as skimage.morphology.opening."""
+    return cucim_morphology.opening(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
+    )
+
+
+def closing(image, footprint=None, out=None, *, mode="reflect", cval=0.0):
+    """CuCIM-backed closing; same signature as skimage.morphology.closing."""
+    return cucim_morphology.closing(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
+    )
+
+
+def white_tophat(image, footprint=None, out=None, *, mode="reflect", cval=0.0):
+    """CuCIM-backed white_tophat; same signature as skimage.morphology.white_tophat."""
+    return cucim_morphology.white_tophat(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
+    )
+
+
+def black_tophat(image, footprint=None, out=None, *, mode="reflect", cval=0.0):
+    """CuCIM-backed black_tophat; same signature as skimage.morphology.black_tophat."""
+    return cucim_morphology.black_tophat(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
     )
