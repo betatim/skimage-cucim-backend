@@ -48,6 +48,19 @@ FILTERS_CALL_PARAMS = [
     ("skimage.filters:unsharp_mask", (), {}, (7, 7)),
 ]
 
+# (name, args, kwargs, expected_shape) for segmentation (label image in, same shape out).
+SEGMENTATION_CALL_PARAMS = [
+    ("skimage.segmentation:clear_border", (), {}, (7, 7)),
+    ("skimage.segmentation:expand_labels", (), {}, (7, 7)),
+    ("skimage.segmentation:find_boundaries", (), {}, (7, 7)),
+]
+
+# (name, args, kwargs, expected_shape) for measure. label: expected_shape (7,7) or None when return_num=True (then result is tuple).
+MEASURE_CALL_PARAMS = [
+    ("skimage.measure:label", (), {}, (7, 7)),
+    ("skimage.measure:label", (), {"return_num": True}, None),  # returns (array, int)
+]
+
 # (name, args, kwargs, expected_shape) for morphology functions (all return same shape as input (7,7)).
 MORPHOLOGY_CALL_PARAMS = [
     ("skimage.morphology:erosion", (), {}, (7, 7)),
@@ -151,6 +164,43 @@ def test_filter_returns_cupy_array(
     if expected_shape is None:
         assert result.ndim == 0
     else:
+        assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", SEGMENTATION_CALL_PARAMS)
+def test_segmentation_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend segmentation with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    # Label image: integer, a few distinct values (e.g. 0, 1, 2)
+    label_im = cupy.array((rng.random((7, 7)) * 3).astype(np.int32))
+    result = impl(label_im, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", MEASURE_CALL_PARAMS)
+def test_measure_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend measure with CuPy input returns CuPy ndarray (or (array, int) for label(return_num=True))."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    # Binary-like image for label
+    image = cupy.array((rng.random((7, 7)) > 0.5).astype(np.int32))
+    result = impl(image, *args, **kwargs)
+    if kwargs.get("return_num"):
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert isinstance(result[0], cupy.ndarray)
+        assert result[0].shape == (7, 7)
+        assert isinstance(result[1], int)
+    else:
+        assert isinstance(result, cupy.ndarray)
         assert result.shape == expected_shape
 
 

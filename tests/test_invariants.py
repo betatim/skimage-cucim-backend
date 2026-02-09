@@ -53,11 +53,24 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
 
         func = getattr(mod, func_name)
         return func(np_arrays[0], *args, **kwargs)
+    if module_path == "segmentation":
+        import skimage.segmentation as mod
+
+        func = getattr(mod, func_name)
+        return func(np_arrays[0], *args, **kwargs)
+    if module_path == "measure":
+        import skimage.measure as mod
+
+        func = getattr(mod, func_name)
+        return func(np_arrays[0], *args, **kwargs)
     raise LookupError(f"No reference implementation for: {name}")
 
 
 def _expected_shape_and_ndim(reference_result):
-    """Return (shape, ndim) from a scikit-image return value (array or scalar)."""
+    """Return (shape, ndim) from a scikit-image return value (array, scalar, or (array, int))."""
+    if isinstance(reference_result, tuple):
+        arr = np.asarray(reference_result[0])
+        return arr.shape, arr.ndim
     arr = np.asarray(reference_result)
     return arr.shape, arr.ndim
 
@@ -140,6 +153,21 @@ EXPOSURE_INVARIANT_CALL_PARAMS = [
     ("skimage.exposure:adjust_gamma", (), {"gamma": 0.5}),
 ]
 
+# (name, args, kwargs) for segmentation: call impl(label_image, *args, **kwargs).
+SEGMENTATION_INVARIANT_CALL_PARAMS = [
+    ("skimage.segmentation:clear_border", (), {}),
+    ("skimage.segmentation:expand_labels", (), {}),
+    ("skimage.segmentation:expand_labels", (), {"distance": 2}),
+    ("skimage.segmentation:find_boundaries", (), {}),
+    ("skimage.segmentation:find_boundaries", (), {"mode": "inner"}),
+]
+
+# (name, args, kwargs) for measure: call impl(image, *args, **kwargs).
+MEASURE_INVARIANT_CALL_PARAMS = [
+    ("skimage.measure:label", (), {}),
+    ("skimage.measure:label", (), {"return_num": True}),
+]
+
 # (name, args, kwargs) for feature functions: call impl(image, *args, **kwargs) or impl(image, template, ...).
 FEATURE_INVARIANT_CALL_PARAMS = [
     ("skimage.feature:canny", (), {}),
@@ -176,12 +204,15 @@ def test_all_supported_functions_covered_in_invariant_call_params():
         | {name for name, _, _ in EXPOSURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in FEATURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in TRANSFORM_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in SEGMENTATION_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in MEASURE_INVARIANT_CALL_PARAMS}
     )
     for fn in SUPPORTED_FUNCTIONS:
         assert fn in param_names, (
             f"{fn} missing from INVARIANT_CALL_PARAMS, "
             f"FILTER_INVARIANT_CALL_PARAMS, MORPHOLOGY_INVARIANT_CALL_PARAMS, "
-            f"EXPOSURE_INVARIANT_CALL_PARAMS, FEATURE_INVARIANT_CALL_PARAMS, or TRANSFORM_INVARIANT_CALL_PARAMS"
+            f"EXPOSURE_INVARIANT_CALL_PARAMS, FEATURE_INVARIANT_CALL_PARAMS, "
+            f"TRANSFORM_INVARIANT_CALL_PARAMS, SEGMENTATION_INVARIANT_CALL_PARAMS, or MEASURE_INVARIANT_CALL_PARAMS"
         )
 
 
@@ -256,6 +287,20 @@ def test_invariant_no_numpy_feature(name, args, kwargs):
         assert not can_has(name, image, template, *args, **kwargs)
     else:
         assert not can_has(name, image, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", SEGMENTATION_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_segmentation(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (segmentation: label image)."""
+    label_image = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.int32)
+    assert not can_has(name, label_image, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", MEASURE_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_measure(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (measure: label image)."""
+    image = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.int32)
+    assert not can_has(name, image, *args, **kwargs)
 
 
 # ---- Invariant 3: Shape/ndim of returned value matches scikit-image ----
@@ -344,6 +389,50 @@ def test_invariant_shape_match_morphology_result(
     assert isinstance(result, cupy.ndarray)
     assert result.shape == expected_shape
     assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", SEGMENTATION_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_segmentation_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for segmentation output."""
+    impl = get_implementation(name)
+    a, _ = minimal_cupy_arrays_2d
+    np_a = (np.asarray(cupy.asnumpy(a)) * 3).astype(np.int32)  # label image
+    ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+    expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+    cp_a = cupy.array(np_a)
+    result = impl(cp_a, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", MEASURE_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_measure_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for measure output."""
+    impl = get_implementation(name)
+    a, _ = minimal_cupy_arrays_2d
+    np_a = (np.asarray(cupy.asnumpy(a)) > 0.5).astype(np.int32)
+    ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+    expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+    cp_a = cupy.array(np_a)
+    result = impl(cp_a, *args, **kwargs)
+    if kwargs.get("return_num"):
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert isinstance(result[0], cupy.ndarray)
+        assert result[0].shape == expected_shape
+        assert result[0].ndim == expected_ndim
+        assert result[1] == ref[1]
+    else:
+        assert isinstance(result, cupy.ndarray)
+        assert result.shape == expected_shape
+        assert result.ndim == expected_ndim
 
 
 @pytest.mark.cupy

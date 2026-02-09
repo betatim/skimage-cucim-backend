@@ -13,6 +13,8 @@ import skimage.exposure as _exposure
 import skimage.feature as _feature
 import skimage.metrics as _metrics
 import skimage.morphology as _morphology
+import skimage.segmentation as _segmentation
+import skimage.measure as _measure
 import skimage.transform as _transform
 import skimage.filters as _filters
 
@@ -81,6 +83,13 @@ def _make_binary_image(seed, xp):
     """One binary image (7, 7) for morphology (boolean mask)."""
     rng = np.random.default_rng(seed)
     im = xp.asarray((rng.random((7, 7)) > 0.5))
+    return (im,)
+
+
+def _make_label_image(seed, xp):
+    """One label image (7, 7) integer for segmentation/measure."""
+    rng = np.random.default_rng(seed)
+    im = xp.asarray((rng.random((7, 7)) * 4).astype(np.int32))
     return (im,)
 
 
@@ -191,6 +200,18 @@ MORPHOLOGY_CALLABLES = [
     ("remove_small_holes", partial(_morphology.remove_small_holes)),
 ]
 
+# Segmentation: f(label_image) -> result; uses integer label image.
+SEGMENTATION_CALLABLES = [
+    ("clear_border", partial(_segmentation.clear_border)),
+    ("expand_labels", partial(_segmentation.expand_labels)),
+    ("find_boundaries", partial(_segmentation.find_boundaries)),
+]
+
+# Measure: f(image) -> result; label uses label image.
+MEASURE_CALLABLES = [
+    ("label", partial(_measure.label)),
+]
+
 # Morphology (gray): f(image) -> result; uses float image.
 GRAY_MORPHOLOGY_CALLABLES = [
     ("erosion", partial(_morphology.erosion)),
@@ -243,6 +264,14 @@ def _numerical_equivalence_covered_dispatch_names():
         if name:
             covered.add(name)
     for _scenario_id, func in GRAY_MORPHOLOGY_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in SEGMENTATION_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in MEASURE_CALLABLES:
         name = _dispatch_name_from_callable(func)
         if name:
             covered.add(name)
@@ -355,6 +384,43 @@ def test_numerical_equivalence_f_im_gray_morphology(
     """NumPy vs CuPy (dispatched) numerical equivalence for gray morphology f(im)."""
     np_arrays = _make_one_image(_SEED, np)
     cp_arrays = _make_one_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+# expand_labels can differ by 1 at tie-breaking pixels (distance transform).
+_SEGMENTATION_ATOL = {"expand_labels": 1.0}
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    SEGMENTATION_CALLABLES,
+    ids=[p[0] for p in SEGMENTATION_CALLABLES],
+)
+def test_numerical_equivalence_f_im_segmentation(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for segmentation f(label_image)."""
+    np_arrays = _make_label_image(_SEED, np)
+    cp_arrays = _make_label_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    atol = _SEGMENTATION_ATOL.get(scenario_id, _ATOL)
+    _assert_allclose(ref, out, cupy, atol=atol)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    MEASURE_CALLABLES,
+    ids=[p[0] for p in MEASURE_CALLABLES],
+)
+def test_numerical_equivalence_f_im_measure(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for measure f(im) (e.g. label)."""
+    np_arrays = _make_label_image(_SEED, np)
+    cp_arrays = _make_label_image(_SEED, cupy)
     ref = func(*np_arrays)
     out = func(*cp_arrays)
     _assert_result_is_cupy(out, cupy)

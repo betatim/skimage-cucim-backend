@@ -113,6 +113,14 @@ CAN_HAS_PARAMS = [
     ("skimage.morphology:white_tophat", False, False, {}, ()),
     ("skimage.morphology:black_tophat", True, True, {}, ()),
     ("skimage.morphology:black_tophat", False, False, {}, ()),
+    ("skimage.segmentation:clear_border", True, True, {}, ()),
+    ("skimage.segmentation:clear_border", False, False, {}, ()),
+    ("skimage.segmentation:expand_labels", True, True, {}, ()),
+    ("skimage.segmentation:expand_labels", False, False, {}, ()),
+    ("skimage.segmentation:find_boundaries", True, True, {}, ()),
+    ("skimage.segmentation:find_boundaries", False, False, {}, ()),
+    ("skimage.measure:label", True, True, {}, ()),
+    ("skimage.measure:label", False, False, {}, ()),
 ]
 
 

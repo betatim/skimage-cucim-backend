@@ -49,6 +49,10 @@ SUPPORTED_FUNCTIONS = [
     "skimage.morphology:closing",
     "skimage.morphology:white_tophat",
     "skimage.morphology:black_tophat",
+    "skimage.segmentation:clear_border",
+    "skimage.segmentation:expand_labels",
+    "skimage.segmentation:find_boundaries",
+    "skimage.measure:label",
 ]
 
 
