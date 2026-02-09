@@ -9,6 +9,8 @@ from skimage_cucim_backend.information import SUPPORTED_FUNCTIONS
 from skimage.util._backends import DispatchNotification, public_api_module
 
 # Import so callables use the public API (dispatching applies when CuPy is passed).
+import skimage.exposure as _exposure
+import skimage.feature as _feature
 import skimage.metrics as _metrics
 import skimage.transform as _transform
 import skimage.filters as _filters
@@ -64,6 +66,14 @@ def _make_one_image(seed, xp):
     rng = np.random.default_rng(seed)
     im = xp.asarray(rng.random((7, 7), dtype=np.float64))
     return (im,)
+
+
+def _make_image_and_template(seed, xp):
+    """Image (7, 7) and template (3, 3) for match_template."""
+    rng = np.random.default_rng(seed)
+    image = xp.asarray(rng.random((7, 7), dtype=np.float64))
+    template = xp.asarray(rng.random((3, 3), dtype=np.float64))
+    return (image, template)
 
 
 # ---- Metrics: f(im1, im2) ----
@@ -140,6 +150,27 @@ SINGLE_IMAGE_CALLABLES = [
     ("prewitt", partial(_filters.prewitt)),
     ("scharr", partial(_filters.scharr)),
     ("median", partial(_filters.median)),
+    ("laplace", partial(_filters.laplace)),
+    ("roberts", partial(_filters.roberts)),
+    ("unsharp_mask", partial(_filters.unsharp_mask)),
+    # Feature (single image)
+    ("canny", partial(_feature.canny)),
+    ("peak_local_max", partial(_feature.peak_local_max)),
+    # Exposure (single image)
+    ("equalize_hist", partial(_exposure.equalize_hist)),
+    ("equalize_adapthist", partial(_exposure.equalize_adapthist)),
+    ("rescale_intensity", partial(_exposure.rescale_intensity)),
+    ("adjust_gamma", partial(_exposure.adjust_gamma)),
+]
+
+# Feature: f(image, template) -> result (match_template only).
+FEATURE_IMAGE_TEMPLATE_CALLABLES = [
+    ("match_template", partial(_feature.match_template)),
+]
+
+# Exposure: f(image, reference) -> result (match_histograms only).
+EXPOSURE_TWO_ARRAY_CALLABLES = [
+    ("match_histograms", partial(_exposure.match_histograms)),
 ]
 
 # Callables that don't unwrap to a single skimage function (lambda, wrapper); map scenario_id -> dispatch name.
@@ -171,6 +202,14 @@ def _numerical_equivalence_covered_dispatch_names():
             covered.add(name)
         elif scenario_id in _DISPATCH_NAME_FALLBACK:
             covered.add(_DISPATCH_NAME_FALLBACK[scenario_id])
+    for _scenario_id, func in FEATURE_IMAGE_TEMPLATE_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in EXPOSURE_TWO_ARRAY_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
     return covered
 
 
@@ -218,6 +257,38 @@ def test_numerical_equivalence_f_im(scenario_id, func, cupy, require_cuda):
     _assert_result_is_cupy(out, cupy)
     atol = _INTEGRATE_ATOL if scenario_id == "integrate" else _ATOL
     _assert_allclose(ref, out, cupy, atol=atol)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    FEATURE_IMAGE_TEMPLATE_CALLABLES,
+    ids=[p[0] for p in FEATURE_IMAGE_TEMPLATE_CALLABLES],
+)
+def test_numerical_equivalence_f_im_template(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for feature f(image, template)."""
+    np_arrays = _make_image_and_template(_SEED, np)
+    cp_arrays = _make_image_and_template(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    EXPOSURE_TWO_ARRAY_CALLABLES,
+    ids=[p[0] for p in EXPOSURE_TWO_ARRAY_CALLABLES],
+)
+def test_numerical_equivalence_f_im_reference(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for exposure f(image, reference)."""
+    np_arrays = _make_two_arrays(_SEED, np)
+    cp_arrays = _make_two_arrays(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
 
 
 @pytest.mark.cupy

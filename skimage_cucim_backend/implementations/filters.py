@@ -95,6 +95,11 @@ def median(
     image, footprint=None, out=None, mode="nearest", cval=0.0, behavior="ndimage"
 ):
     """CuCIM-backed median; same signature as skimage.filters.median."""
+    if behavior == "rank":
+        raise ValueError(
+            "skimage-cucim-backend does not support median(behavior='rank'); "
+            "CuCIM implements only behavior='ndimage'. Use the default backend for rank."
+        )
     return cucim_filters.median(
         image,
         footprint=footprint,
@@ -102,4 +107,32 @@ def median(
         mode=mode,
         cval=cval,
         behavior=behavior,
+    )
+
+
+def laplace(image, ksize=3, mask=None):
+    """CuCIM-backed laplace; same signature as skimage.filters.laplace."""
+    if ksize != 3:
+        raise ValueError(
+            f"skimage-cucim-backend supports laplace(ksize=3) only, got ksize={ksize}. "
+            "Use the default backend for other ksize values."
+        )
+    return cucim_filters.laplace(image, ksize=ksize, mask=mask)
+
+
+def roberts(image, mask=None):
+    """CuCIM-backed roberts; same signature as skimage.filters.roberts."""
+    return cucim_filters.roberts(image, mask=mask)
+
+
+def unsharp_mask(
+    image, radius=1.0, amount=1.0, preserve_range=False, *, channel_axis=None
+):
+    """CuCIM-backed unsharp_mask; same signature as skimage.filters.unsharp_mask."""
+    return cucim_filters.unsharp_mask(
+        image,
+        radius=radius,
+        amount=amount,
+        preserve_range=preserve_range,
+        channel_axis=channel_axis,
     )

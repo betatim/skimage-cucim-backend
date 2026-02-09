@@ -53,9 +53,26 @@ def _first_array_from_args(args, kwargs):
     return None
 
 
+def _reject_dispatch(name, args, kwargs):
+    """Return True when the backend cannot handle this call due to unsupported parameters.
+
+    CuCIM has limitations that scikit-image does not; for those cases we reject
+    dispatching so scikit-image will use its own implementation.
+    """
+    if name == "skimage.filters:laplace":
+        if kwargs.get("ksize", 3) != 3:
+            return True  # CuCIM supports only ksize=3
+    elif name == "skimage.filters:median":
+        if kwargs.get("behavior", "ndimage") == "rank":
+            return True  # CuCIM does not implement rank behavior
+    return False
+
+
 def can_has(name, *args, **kwargs):
     """Return True only when the backend can handle this call (CuPy array inputs only)."""
     if name not in SUPPORTED_FUNCTIONS:
+        return False
+    if _reject_dispatch(name, args, kwargs):
         return False
     arr = _first_array_from_args(args, kwargs)
     # XXX we need to handle the case if there are no array inputs
@@ -74,7 +91,7 @@ def get_implementation(name):
     _, rest = name.split(".", maxsplit=1)
     module_path, func_name = rest.rsplit(":", maxsplit=1)
 
-    if module_path in ("metrics", "transform", "filters"):
+    if module_path in ("metrics", "transform", "filters", "feature", "exposure"):
         mod = importlib.import_module(
             f"skimage_cucim_backend.implementations.{module_path}"
         )

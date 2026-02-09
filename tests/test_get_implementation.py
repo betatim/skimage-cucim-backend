@@ -43,6 +43,27 @@ FILTERS_CALL_PARAMS = [
     ("skimage.filters:prewitt", (), {}, (7, 7)),
     ("skimage.filters:scharr", (), {}, (7, 7)),
     ("skimage.filters:median", (), {}, (7, 7)),
+    ("skimage.filters:laplace", (), {}, (7, 7)),  # CuCIM supports only ksize=3
+    ("skimage.filters:roberts", (), {}, (7, 7)),
+    ("skimage.filters:unsharp_mask", (), {}, (7, 7)),
+]
+
+# (name, args, kwargs, expected_shape) for exposure functions (all return same shape as image (7,7)).
+EXPOSURE_CALL_PARAMS = [
+    ("skimage.exposure:equalize_hist", (), {}, (7, 7)),
+    ("skimage.exposure:equalize_adapthist", (), {}, (7, 7)),
+    ("skimage.exposure:match_histograms", (), {}, (7, 7)),  # reference built in test
+    ("skimage.exposure:rescale_intensity", (), {}, (7, 7)),
+    ("skimage.exposure:adjust_gamma", (), {}, (7, 7)),
+]
+
+# (name, args, kwargs, expected_shape) for feature functions.
+# peak_local_max expected_shape is None (variable: (n_peaks, 2)); test only checks ndim and shape[1].
+# match_template: test builds 3x3 template for 7x7 image -> output (5, 5).
+FEATURE_CALL_PARAMS = [
+    ("skimage.feature:canny", (), {}, (7, 7)),
+    ("skimage.feature:peak_local_max", (), {}, None),  # (n_peaks, 2)
+    ("skimage.feature:match_template", (), {}, (5, 5)),
 ]
 
 # (name, args, kwargs, expected_shape) for transform functions that return arrays.
@@ -121,7 +142,75 @@ def test_filter_returns_cupy_array(
         assert result.shape == expected_shape
 
 
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", EXPOSURE_CALL_PARAMS)
+def test_exposure_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend exposure with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    image = cupy.array(rng.random((7, 7), dtype=np.float64))
+    if name == "skimage.exposure:match_histograms":
+        reference = cupy.array(rng.random((7, 7), dtype=np.float64))
+        result = impl(image, reference, *args, **kwargs)
+    else:
+        result = impl(image, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", FEATURE_CALL_PARAMS)
+def test_feature_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend feature with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    image = cupy.array(rng.random((7, 7), dtype=np.float64))
+    if name == "skimage.feature:match_template":
+        template = cupy.array(rng.random((3, 3), dtype=np.float64))
+        result = impl(image, template, *args, **kwargs)
+    else:
+        result = impl(image, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    if expected_shape is None:
+        # peak_local_max: (n_peaks, 2)
+        assert result.ndim == 2
+        assert result.shape[1] == 2
+    else:
+        assert result.shape == expected_shape
+
+
 def test_get_implementation_unsupported_raises():
     """get_implementation for unsupported name raises LookupError."""
     with pytest.raises(LookupError, match="Unsupported"):
         get_implementation("skimage.metrics:nonexistent")
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "name,call_kwargs,match",
+    [
+        (
+            "skimage.filters:laplace",
+            {"ksize": 5},
+            "supports laplace\\(ksize=3\\) only",
+        ),
+        (
+            "skimage.filters:median",
+            {"behavior": "rank"},
+            "does not support median\\(behavior='rank'\\)",
+        ),
+    ],
+)
+def test_implementation_raises_for_unsupported_params(
+    name, call_kwargs, match, cupy, require_cuda
+):
+    """Calling backend implementation with CuCIM-unsupported params raises ValueError."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    image = cupy.array(rng.random((7, 7), dtype=np.float64))
+    with pytest.raises(ValueError, match=match):
+        impl(image, **call_kwargs)

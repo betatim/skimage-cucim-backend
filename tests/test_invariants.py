@@ -34,6 +34,20 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
 
         func = getattr(mod, func_name)
         return func(np_arrays[0], *args, **kwargs)
+    if module_path == "feature":
+        import skimage.feature as mod
+
+        func = getattr(mod, func_name)
+        if func_name == "match_template":
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
+        return func(np_arrays[0], *args, **kwargs)
+    if module_path == "exposure":
+        import skimage.exposure as mod
+
+        func = getattr(mod, func_name)
+        if func_name == "match_histograms":
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
+        return func(np_arrays[0], *args, **kwargs)
     raise LookupError(f"No reference implementation for: {name}")
 
 
@@ -82,6 +96,34 @@ FILTER_INVARIANT_CALL_PARAMS = [
     ("skimage.filters:prewitt", (), {}),
     ("skimage.filters:scharr", (), {}),
     ("skimage.filters:median", (), {}),
+    ("skimage.filters:laplace", (), {}),
+    ("skimage.filters:roberts", (), {}),
+    ("skimage.filters:unsharp_mask", (), {}),
+]
+
+# (name, args, kwargs) for exposure functions: call impl(image, *args, **kwargs) or impl(image, reference, ...).
+EXPOSURE_INVARIANT_CALL_PARAMS = [
+    ("skimage.exposure:equalize_hist", (), {}),
+    ("skimage.exposure:equalize_adapthist", (), {}),
+    ("skimage.exposure:match_histograms", (), {}),
+    ("skimage.exposure:rescale_intensity", (), {}),
+    (
+        "skimage.exposure:rescale_intensity",
+        (),
+        {"in_range": (0, 1), "out_range": (0, 1)},
+    ),
+    ("skimage.exposure:adjust_gamma", (), {}),
+    ("skimage.exposure:adjust_gamma", (), {"gamma": 0.5}),
+]
+
+# (name, args, kwargs) for feature functions: call impl(image, *args, **kwargs) or impl(image, template, ...).
+FEATURE_INVARIANT_CALL_PARAMS = [
+    ("skimage.feature:canny", (), {}),
+    ("skimage.feature:canny", (), {"sigma": 1.5}),
+    ("skimage.feature:peak_local_max", (), {}),
+    ("skimage.feature:peak_local_max", (), {"min_distance": 2}),
+    ("skimage.feature:match_template", (), {}),
+    ("skimage.feature:match_template", (), {"pad_input": True}),
 ]
 
 # (name, args, kwargs) for transform functions: call impl(image, *args, **kwargs); returns array.
@@ -106,12 +148,15 @@ def test_all_supported_functions_covered_in_invariant_call_params():
     param_names = (
         {name for name, _, _ in INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in FILTER_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in EXPOSURE_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in FEATURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in TRANSFORM_INVARIANT_CALL_PARAMS}
     )
     for fn in SUPPORTED_FUNCTIONS:
         assert fn in param_names, (
             f"{fn} missing from INVARIANT_CALL_PARAMS, "
-            f"FILTER_INVARIANT_CALL_PARAMS, or TRANSFORM_INVARIANT_CALL_PARAMS"
+            f"FILTER_INVARIANT_CALL_PARAMS, EXPOSURE_INVARIANT_CALL_PARAMS, "
+            f"FEATURE_INVARIANT_CALL_PARAMS, or TRANSFORM_INVARIANT_CALL_PARAMS"
         )
 
 
@@ -151,6 +196,28 @@ def test_invariant_no_numpy_filter(name, args, kwargs):
         assert not can_has(name, hist=kwargs["hist"])
     else:
         image = np.array([[0.0, 0.5], [0.2, 0.8]], dtype=np.float64)
+        assert not can_has(name, image, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", EXPOSURE_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_exposure(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (exposure: image or image+reference)."""
+    image = np.array([[0.0, 0.5], [0.2, 0.8]], dtype=np.float64)
+    if name == "skimage.exposure:match_histograms":
+        reference = np.array([[0.1, 0.4], [0.3, 0.9]], dtype=np.float64)
+        assert not can_has(name, image, reference, *args, **kwargs)
+    else:
+        assert not can_has(name, image, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", FEATURE_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_feature(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (feature: image or image+template)."""
+    image = np.array([[0.0, 0.5], [0.2, 0.8]], dtype=np.float64)
+    if name == "skimage.feature:match_template":
+        template = np.array([[0.1]], dtype=np.float64)
+        assert not can_has(name, image, template, *args, **kwargs)
+    else:
         assert not can_has(name, image, *args, **kwargs)
 
 
@@ -211,6 +278,57 @@ def test_invariant_shape_match_filter_result(
     else:
         a, _ = minimal_cupy_arrays_2d
         np_a = np.asarray(cupy.asnumpy(a))
+        ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+        expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+        result = impl(a, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", EXPOSURE_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_exposure_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for exposure output."""
+    impl = get_implementation(name)
+    a, b = minimal_cupy_arrays_2d
+    np_a = np.asarray(cupy.asnumpy(a))
+    if name == "skimage.exposure:match_histograms":
+        np_b = np.asarray(cupy.asnumpy(b))
+        ref = _skimage_reference_result(name, (np_a, np_b), args, kwargs)
+        expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+        result = impl(a, b, *args, **kwargs)
+    else:
+        ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+        expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+        result = impl(a, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", FEATURE_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_feature_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for feature output."""
+    impl = get_implementation(name)
+    a, b = minimal_cupy_arrays_2d
+    np_a = np.asarray(cupy.asnumpy(a))
+    if name == "skimage.feature:match_template":
+        # Need image and template; minimal arrays are 2x2, use 7x7 and 3x3 for match_template
+        rng = np.random.default_rng(42)
+        np_img = rng.random((7, 7), dtype=np.float64)
+        np_tpl = rng.random((3, 3), dtype=np.float64)
+        ref = _skimage_reference_result(name, (np_img, np_tpl), args, kwargs)
+        expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+        cp_img = cupy.array(np_img)
+        cp_tpl = cupy.array(np_tpl)
+        result = impl(cp_img, cp_tpl, *args, **kwargs)
+    else:
         ref = _skimage_reference_result(name, (np_a,), args, kwargs)
         expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
         result = impl(a, *args, **kwargs)

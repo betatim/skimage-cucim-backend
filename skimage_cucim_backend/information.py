@@ -30,6 +30,17 @@ SUPPORTED_FUNCTIONS = [
     "skimage.filters:prewitt",
     "skimage.filters:scharr",
     "skimage.filters:median",
+    "skimage.filters:laplace",
+    "skimage.filters:roberts",
+    "skimage.filters:unsharp_mask",
+    "skimage.feature:canny",
+    "skimage.feature:peak_local_max",
+    "skimage.feature:match_template",
+    "skimage.exposure:equalize_hist",
+    "skimage.exposure:equalize_adapthist",
+    "skimage.exposure:match_histograms",
+    "skimage.exposure:rescale_intensity",
+    "skimage.exposure:adjust_gamma",
 ]
 
 

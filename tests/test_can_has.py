@@ -75,6 +75,28 @@ CAN_HAS_PARAMS = [
     ("skimage.filters:scharr", False, False, {}, ()),
     ("skimage.filters:median", True, True, {}, ()),
     ("skimage.filters:median", False, False, {}, ()),
+    ("skimage.filters:laplace", True, True, {}, ()),
+    ("skimage.filters:laplace", False, False, {}, ()),
+    ("skimage.filters:roberts", True, True, {}, ()),
+    ("skimage.filters:roberts", False, False, {}, ()),
+    ("skimage.filters:unsharp_mask", True, True, {}, ()),
+    ("skimage.filters:unsharp_mask", False, False, {}, ()),
+    ("skimage.feature:canny", True, True, {}, ()),
+    ("skimage.feature:canny", False, False, {}, ()),
+    ("skimage.feature:peak_local_max", True, True, {}, ()),
+    ("skimage.feature:peak_local_max", False, False, {}, ()),
+    ("skimage.feature:match_template", True, True, {}, None),
+    ("skimage.feature:match_template", False, False, {}, None),
+    ("skimage.exposure:equalize_hist", True, True, {}, ()),
+    ("skimage.exposure:equalize_hist", False, False, {}, ()),
+    ("skimage.exposure:equalize_adapthist", True, True, {}, ()),
+    ("skimage.exposure:equalize_adapthist", False, False, {}, ()),
+    ("skimage.exposure:match_histograms", True, True, {}, None),
+    ("skimage.exposure:match_histograms", False, False, {}, None),
+    ("skimage.exposure:rescale_intensity", True, True, {}, ()),
+    ("skimage.exposure:rescale_intensity", False, False, {}, ()),
+    ("skimage.exposure:adjust_gamma", True, True, {}, ()),
+    ("skimage.exposure:adjust_gamma", False, False, {}, ()),
 ]
 
 
@@ -104,6 +126,27 @@ def test_can_has_threshold_hist_only(name, use_cupy, expected):
         xp = np
     hist = make_hist_for_otsu(xp)
     result = can_has(name, hist=hist)
+    assert result is expected
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "name,kwargs,expected",
+    [
+        ("skimage.filters:laplace", {"ksize": 5}, False),
+        ("skimage.filters:laplace", {"ksize": 1}, False),
+        ("skimage.filters:laplace", {"ksize": 3}, True),
+        ("skimage.filters:laplace", {}, True),
+        ("skimage.filters:median", {"behavior": "rank"}, False),
+        ("skimage.filters:median", {"behavior": "ndimage"}, True),
+        ("skimage.filters:median", {}, True),
+    ],
+)
+def test_can_has_rejects_unsupported_params(name, kwargs, expected):
+    """can_has returns False for CuCIM-unsupported params so scikit-image keeps dispatch."""
+    cupy = pytest.importorskip("cupy")
+    image = cupy.array([[0.0, 0.5], [0.2, 0.8]], dtype=cupy.float64)
+    result = can_has(name, image, **kwargs)
     assert result is expected
 
 
