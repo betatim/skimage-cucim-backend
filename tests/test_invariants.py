@@ -57,6 +57,8 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
         import skimage.segmentation as mod
 
         func = getattr(mod, func_name)
+        if func_name == "join_segmentations":
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
         return func(np_arrays[0], *args, **kwargs)
     if module_path == "measure":
         import skimage.measure as mod
@@ -154,12 +156,17 @@ EXPOSURE_INVARIANT_CALL_PARAMS = [
 ]
 
 # (name, args, kwargs) for segmentation: call impl(label_image, *args, **kwargs).
+# join_segmentations uses two label images (handled in test).
 SEGMENTATION_INVARIANT_CALL_PARAMS = [
     ("skimage.segmentation:clear_border", (), {}),
     ("skimage.segmentation:expand_labels", (), {}),
     ("skimage.segmentation:expand_labels", (), {"distance": 2}),
     ("skimage.segmentation:find_boundaries", (), {}),
     ("skimage.segmentation:find_boundaries", (), {"mode": "inner"}),
+    ("skimage.segmentation:join_segmentations", (), {}),
+    ("skimage.segmentation:join_segmentations", (), {"return_mapping": True}),
+    ("skimage.segmentation:relabel_sequential", (), {}),
+    ("skimage.segmentation:relabel_sequential", (), {"offset": 5}),
 ]
 
 # (name, args, kwargs) for measure: call impl(image, *args, **kwargs).
@@ -293,7 +300,11 @@ def test_invariant_no_numpy_feature(name, args, kwargs):
 def test_invariant_no_numpy_segmentation(name, args, kwargs):
     """can_has returns False for NumPy array inputs (segmentation: label image)."""
     label_image = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.int32)
-    assert not can_has(name, label_image, *args, **kwargs)
+    if "join_segmentations" in name:
+        label_image2 = np.array([[0, 0, 1], [0, 1, 1], [1, 1, 0]], dtype=np.int32)
+        assert not can_has(name, label_image, label_image2, *args, **kwargs)
+    else:
+        assert not can_has(name, label_image, *args, **kwargs)
 
 
 @pytest.mark.parametrize("name,args,kwargs", MEASURE_INVARIANT_CALL_PARAMS)
@@ -398,15 +409,27 @@ def test_invariant_shape_match_segmentation_result(
 ):
     """Backend return shape/ndim matches scikit-image for segmentation output."""
     impl = get_implementation(name)
-    a, _ = minimal_cupy_arrays_2d
+    a, b = minimal_cupy_arrays_2d
     np_a = (np.asarray(cupy.asnumpy(a)) * 3).astype(np.int32)  # label image
-    ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+    if "join_segmentations" in name:
+        np_b = (np.asarray(cupy.asnumpy(b)) * 2).astype(np.int32)
+        ref = _skimage_reference_result(name, (np_a, np_b), args, kwargs)
+        cp_a, cp_b = cupy.array(np_a), cupy.array(np_b)
+        result = impl(cp_a, cp_b, *args, **kwargs)
+    else:
+        ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+        cp_a = cupy.array(np_a)
+        result = impl(cp_a, *args, **kwargs)
     expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
-    cp_a = cupy.array(np_a)
-    result = impl(cp_a, *args, **kwargs)
-    assert isinstance(result, cupy.ndarray)
-    assert result.shape == expected_shape
-    assert result.ndim == expected_ndim
+    if isinstance(ref, tuple):
+        assert isinstance(result, tuple)
+        assert isinstance(result[0], cupy.ndarray)
+        assert result[0].shape == expected_shape
+        assert result[0].ndim == expected_ndim
+    else:
+        assert isinstance(result, cupy.ndarray)
+        assert result.shape == expected_shape
+        assert result.ndim == expected_ndim
 
 
 @pytest.mark.cupy

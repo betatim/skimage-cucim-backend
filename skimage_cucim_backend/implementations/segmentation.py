@@ -31,3 +31,13 @@ def find_boundaries(label_img, connectivity=1, mode="thick", background=0):
         mode=mode,
         background=background,
     )
+
+
+def join_segmentations(s1, s2, return_mapping=False):
+    """CuCIM-backed join_segmentations; same signature as skimage.segmentation.join_segmentations."""
+    return cucim_segmentation.join_segmentations(s1, s2, return_mapping=return_mapping)
+
+
+def relabel_sequential(label_field, offset=1):
+    """CuCIM-backed relabel_sequential; same signature as skimage.segmentation.relabel_sequential."""
+    return cucim_segmentation.relabel_sequential(label_field, offset=offset)

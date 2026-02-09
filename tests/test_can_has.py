@@ -119,6 +119,10 @@ CAN_HAS_PARAMS = [
     ("skimage.segmentation:expand_labels", False, False, {}, ()),
     ("skimage.segmentation:find_boundaries", True, True, {}, ()),
     ("skimage.segmentation:find_boundaries", False, False, {}, ()),
+    ("skimage.segmentation:join_segmentations", True, True, {}, None),
+    ("skimage.segmentation:join_segmentations", False, False, {}, None),
+    ("skimage.segmentation:relabel_sequential", True, True, {}, ()),
+    ("skimage.segmentation:relabel_sequential", False, False, {}, ()),
     ("skimage.measure:label", True, True, {}, ()),
     ("skimage.measure:label", False, False, {}, ()),
 ]

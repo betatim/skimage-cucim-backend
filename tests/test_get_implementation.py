@@ -49,10 +49,13 @@ FILTERS_CALL_PARAMS = [
 ]
 
 # (name, args, kwargs, expected_shape) for segmentation (label image in, same shape out).
+# join_segmentations: (s1, s2) -> array or (array, map, map); test uses two label images.
 SEGMENTATION_CALL_PARAMS = [
     ("skimage.segmentation:clear_border", (), {}, (7, 7)),
     ("skimage.segmentation:expand_labels", (), {}, (7, 7)),
     ("skimage.segmentation:find_boundaries", (), {}, (7, 7)),
+    ("skimage.segmentation:join_segmentations", (), {}, (7, 7)),
+    ("skimage.segmentation:relabel_sequential", (), {}, (7, 7)),
 ]
 
 # (name, args, kwargs, expected_shape) for measure. label: expected_shape (7,7) or None when return_num=True (then result is tuple).
@@ -175,11 +178,20 @@ def test_segmentation_returns_cupy_array(
     """Backend segmentation with CuPy input returns CuPy ndarray with expected shape."""
     impl = get_implementation(name)
     rng = np.random.default_rng(42)
-    # Label image: integer, a few distinct values (e.g. 0, 1, 2)
     label_im = cupy.array((rng.random((7, 7)) * 3).astype(np.int32))
-    result = impl(label_im, *args, **kwargs)
-    assert isinstance(result, cupy.ndarray)
-    assert result.shape == expected_shape
+    if "join_segmentations" in name:
+        label_im2 = cupy.array((rng.random((7, 7)) * 2).astype(np.int32))
+        result = impl(label_im, label_im2, *args, **kwargs)
+    else:
+        result = impl(label_im, *args, **kwargs)
+    if "relabel_sequential" in name:
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+        assert isinstance(result[0], cupy.ndarray)
+        assert result[0].shape == expected_shape
+    else:
+        assert isinstance(result, cupy.ndarray)
+        assert result.shape == expected_shape
 
 
 @pytest.mark.cupy

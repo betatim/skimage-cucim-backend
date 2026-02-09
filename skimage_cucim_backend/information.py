@@ -52,6 +52,8 @@ SUPPORTED_FUNCTIONS = [
     "skimage.segmentation:clear_border",
     "skimage.segmentation:expand_labels",
     "skimage.segmentation:find_boundaries",
+    "skimage.segmentation:join_segmentations",
+    "skimage.segmentation:relabel_sequential",
     "skimage.measure:label",
 ]
 

@@ -37,12 +37,14 @@ def _to_numpy(result, cupy_module):
 
 
 def _assert_result_is_cupy(result, cupy_module):
-    """Assert that result (from a call with CuPy inputs) is a CuPy ndarray or tuple of CuPy ndarrays."""
+    """Assert that result (from a call with CuPy inputs) is a CuPy ndarray or tuple of CuPy ndarrays.
+    Tuples may contain ArrayMap (e.g. relabel_sequential); we only require the first element to be ndarray.
+    """
     if isinstance(result, tuple):
-        for r in result:
-            assert isinstance(r, cupy_module.ndarray), (
-                f"Expected cupy.ndarray, got {type(r)}"
-            )
+        # First element is always the label array; rest may be ArrayMap etc.
+        assert isinstance(result[0], cupy_module.ndarray), (
+            f"Expected cupy.ndarray as first element, got {type(result[0])}"
+        )
     else:
         assert isinstance(result, cupy_module.ndarray), (
             f"Expected cupy.ndarray, got {type(result)}"
@@ -91,6 +93,14 @@ def _make_label_image(seed, xp):
     rng = np.random.default_rng(seed)
     im = xp.asarray((rng.random((7, 7)) * 4).astype(np.int32))
     return (im,)
+
+
+def _make_two_label_images(seed, xp):
+    """Two label images (s1, s2) of shape (7, 7) for join_segmentations."""
+    rng = np.random.default_rng(seed)
+    s1 = xp.asarray((rng.random((7, 7)) * 4).astype(np.int32))
+    s2 = xp.asarray((rng.random((7, 7)) * 3).astype(np.int32))
+    return (s1, s2)
 
 
 # ---- Metrics: f(im1, im2) ----
@@ -205,6 +215,12 @@ SEGMENTATION_CALLABLES = [
     ("clear_border", partial(_segmentation.clear_border)),
     ("expand_labels", partial(_segmentation.expand_labels)),
     ("find_boundaries", partial(_segmentation.find_boundaries)),
+    ("relabel_sequential", partial(_segmentation.relabel_sequential)),
+]
+
+# Segmentation with two label images: f(s1, s2) -> result.
+SEGMENTATION_TWO_ARRAY_CALLABLES = [
+    ("join_segmentations", partial(_segmentation.join_segmentations)),
 ]
 
 # Measure: f(image) -> result; label uses label image.
@@ -268,6 +284,10 @@ def _numerical_equivalence_covered_dispatch_names():
         if name:
             covered.add(name)
     for _scenario_id, func in SEGMENTATION_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in SEGMENTATION_TWO_ARRAY_CALLABLES:
         name = _dispatch_name_from_callable(func)
         if name:
             covered.add(name)
@@ -408,7 +428,32 @@ def test_numerical_equivalence_f_im_segmentation(scenario_id, func, cupy, requir
     out = func(*cp_arrays)
     _assert_result_is_cupy(out, cupy)
     atol = _SEGMENTATION_ATOL.get(scenario_id, _ATOL)
-    _assert_allclose(ref, out, cupy, atol=atol)
+    if isinstance(ref, tuple):
+        _assert_allclose(ref[0], out[0], cupy, atol=atol)
+    else:
+        _assert_allclose(ref, out, cupy, atol=atol)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    SEGMENTATION_TWO_ARRAY_CALLABLES,
+    ids=[p[0] for p in SEGMENTATION_TWO_ARRAY_CALLABLES],
+)
+def test_numerical_equivalence_f_im_segmentation_two_arrays(
+    scenario_id, func, cupy, require_cuda
+):
+    """NumPy vs CuPy (dispatched) numerical equivalence for segmentation f(s1, s2)."""
+    np_arrays = _make_two_label_images(_SEED, np)
+    cp_arrays = _make_two_label_images(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    atol = _SEGMENTATION_ATOL.get(scenario_id, _ATOL)
+    if isinstance(ref, tuple):
+        _assert_allclose(ref[0], out[0], cupy, atol=atol)
+    else:
+        _assert_allclose(ref, out, cupy, atol=atol)
 
 
 @pytest.mark.cupy
