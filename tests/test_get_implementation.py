@@ -48,6 +48,16 @@ FILTERS_CALL_PARAMS = [
     ("skimage.filters:unsharp_mask", (), {}, (7, 7)),
 ]
 
+# (name, args, kwargs, expected_shape) for morphology functions (all return same shape as input (7,7)).
+MORPHOLOGY_CALL_PARAMS = [
+    ("skimage.morphology:binary_erosion", (), {}, (7, 7)),
+    ("skimage.morphology:binary_dilation", (), {}, (7, 7)),
+    ("skimage.morphology:binary_opening", (), {}, (7, 7)),
+    ("skimage.morphology:binary_closing", (), {}, (7, 7)),
+    ("skimage.morphology:remove_small_objects", (), {}, (7, 7)),
+    ("skimage.morphology:remove_small_holes", (), {}, (7, 7)),
+]
+
 # (name, args, kwargs, expected_shape) for exposure functions (all return same shape as image (7,7)).
 EXPOSURE_CALL_PARAMS = [
     ("skimage.exposure:equalize_hist", (), {}, (7, 7)),
@@ -140,6 +150,21 @@ def test_filter_returns_cupy_array(
         assert result.ndim == 0
     else:
         assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", MORPHOLOGY_CALL_PARAMS)
+def test_morphology_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend morphology with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    # Binary or small-integer array for morphology
+    image = cupy.array((rng.random((7, 7)) > 0.5).astype(np.uint8))
+    result = impl(image, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
 
 
 @pytest.mark.cupy

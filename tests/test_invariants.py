@@ -48,6 +48,11 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
         if func_name == "match_histograms":
             return func(np_arrays[0], np_arrays[1], *args, **kwargs)
         return func(np_arrays[0], *args, **kwargs)
+    if module_path == "morphology":
+        import skimage.morphology as mod
+
+        func = getattr(mod, func_name)
+        return func(np_arrays[0], *args, **kwargs)
     raise LookupError(f"No reference implementation for: {name}")
 
 
@@ -101,6 +106,18 @@ FILTER_INVARIANT_CALL_PARAMS = [
     ("skimage.filters:unsharp_mask", (), {}),
 ]
 
+# (name, args, kwargs) for morphology functions: call impl(ar, *args, **kwargs).
+MORPHOLOGY_INVARIANT_CALL_PARAMS = [
+    ("skimage.morphology:binary_erosion", (), {}),
+    ("skimage.morphology:binary_dilation", (), {}),
+    ("skimage.morphology:binary_opening", (), {}),
+    ("skimage.morphology:binary_closing", (), {}),
+    ("skimage.morphology:remove_small_objects", (), {}),
+    ("skimage.morphology:remove_small_objects", (), {"max_size": 10}),
+    ("skimage.morphology:remove_small_holes", (), {}),
+    ("skimage.morphology:remove_small_holes", (), {"max_size": 10}),
+]
+
 # (name, args, kwargs) for exposure functions: call impl(image, *args, **kwargs) or impl(image, reference, ...).
 EXPOSURE_INVARIANT_CALL_PARAMS = [
     ("skimage.exposure:equalize_hist", (), {}),
@@ -148,6 +165,7 @@ def test_all_supported_functions_covered_in_invariant_call_params():
     param_names = (
         {name for name, _, _ in INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in FILTER_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in MORPHOLOGY_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in EXPOSURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in FEATURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in TRANSFORM_INVARIANT_CALL_PARAMS}
@@ -155,8 +173,8 @@ def test_all_supported_functions_covered_in_invariant_call_params():
     for fn in SUPPORTED_FUNCTIONS:
         assert fn in param_names, (
             f"{fn} missing from INVARIANT_CALL_PARAMS, "
-            f"FILTER_INVARIANT_CALL_PARAMS, EXPOSURE_INVARIANT_CALL_PARAMS, "
-            f"FEATURE_INVARIANT_CALL_PARAMS, or TRANSFORM_INVARIANT_CALL_PARAMS"
+            f"FILTER_INVARIANT_CALL_PARAMS, MORPHOLOGY_INVARIANT_CALL_PARAMS, "
+            f"EXPOSURE_INVARIANT_CALL_PARAMS, FEATURE_INVARIANT_CALL_PARAMS, or TRANSFORM_INVARIANT_CALL_PARAMS"
         )
 
 
@@ -197,6 +215,13 @@ def test_invariant_no_numpy_filter(name, args, kwargs):
     else:
         image = np.array([[0.0, 0.5], [0.2, 0.8]], dtype=np.float64)
         assert not can_has(name, image, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", MORPHOLOGY_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_morphology(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (morphology)."""
+    image = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+    assert not can_has(name, image, *args, **kwargs)
 
 
 @pytest.mark.parametrize("name,args,kwargs", EXPOSURE_INVARIANT_CALL_PARAMS)
@@ -281,6 +306,26 @@ def test_invariant_shape_match_filter_result(
         ref = _skimage_reference_result(name, (np_a,), args, kwargs)
         expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
         result = impl(a, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", MORPHOLOGY_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_morphology_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for morphology output."""
+    impl = get_implementation(name)
+    a, _ = minimal_cupy_arrays_2d
+    # Morphology expects binary or int; use 0/1 from float
+    np_a = np.asarray(cupy.asnumpy(a))
+    np_a = (np_a > 0.5).astype(np.uint8)
+    ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+    expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+    cp_a = cupy.array(np_a)
+    result = impl(cp_a, *args, **kwargs)
     assert isinstance(result, cupy.ndarray)
     assert result.shape == expected_shape
     assert result.ndim == expected_ndim

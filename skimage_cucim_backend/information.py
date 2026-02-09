@@ -41,6 +41,12 @@ SUPPORTED_FUNCTIONS = [
     "skimage.exposure:match_histograms",
     "skimage.exposure:rescale_intensity",
     "skimage.exposure:adjust_gamma",
+    "skimage.morphology:binary_erosion",
+    "skimage.morphology:binary_dilation",
+    "skimage.morphology:binary_opening",
+    "skimage.morphology:binary_closing",
+    "skimage.morphology:remove_small_objects",
+    "skimage.morphology:remove_small_holes",
 ]
 
 

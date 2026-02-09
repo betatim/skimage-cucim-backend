@@ -12,6 +12,7 @@ from skimage.util._backends import DispatchNotification, public_api_module
 import skimage.exposure as _exposure
 import skimage.feature as _feature
 import skimage.metrics as _metrics
+import skimage.morphology as _morphology
 import skimage.transform as _transform
 import skimage.filters as _filters
 
@@ -74,6 +75,13 @@ def _make_image_and_template(seed, xp):
     image = xp.asarray(rng.random((7, 7), dtype=np.float64))
     template = xp.asarray(rng.random((3, 3), dtype=np.float64))
     return (image, template)
+
+
+def _make_binary_image(seed, xp):
+    """One binary image (7, 7) for morphology (bool or uint8 0/1)."""
+    rng = np.random.default_rng(seed)
+    im = xp.asarray((rng.random((7, 7)) > 0.5).astype(np.uint8))
+    return (im,)
 
 
 # ---- Metrics: f(im1, im2) ----
@@ -173,6 +181,16 @@ EXPOSURE_TWO_ARRAY_CALLABLES = [
     ("match_histograms", partial(_exposure.match_histograms)),
 ]
 
+# Morphology (binary + misc): f(ar) -> result; requires binary/labeled input.
+MORPHOLOGY_CALLABLES = [
+    ("binary_erosion", partial(_morphology.binary_erosion)),
+    ("binary_dilation", partial(_morphology.binary_dilation)),
+    ("binary_opening", partial(_morphology.binary_opening)),
+    ("binary_closing", partial(_morphology.binary_closing)),
+    ("remove_small_objects", partial(_morphology.remove_small_objects)),
+    ("remove_small_holes", partial(_morphology.remove_small_holes)),
+]
+
 # Callables that don't unwrap to a single skimage function (lambda, wrapper); map scenario_id -> dispatch name.
 _DISPATCH_NAME_FALLBACK = {
     "warp": "skimage.transform:warp",
@@ -207,6 +225,10 @@ def _numerical_equivalence_covered_dispatch_names():
         if name:
             covered.add(name)
     for _scenario_id, func in EXPOSURE_TWO_ARRAY_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in MORPHOLOGY_CALLABLES:
         name = _dispatch_name_from_callable(func)
         if name:
             covered.add(name)
@@ -285,6 +307,24 @@ def test_numerical_equivalence_f_im_reference(scenario_id, func, cupy, require_c
     """NumPy vs CuPy (dispatched) numerical equivalence for exposure f(image, reference)."""
     np_arrays = _make_two_arrays(_SEED, np)
     cp_arrays = _make_two_arrays(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    MORPHOLOGY_CALLABLES,
+    ids=[p[0] for p in MORPHOLOGY_CALLABLES],
+)
+def test_numerical_equivalence_f_im_morphology(
+    scenario_id, func, cupy, require_cuda
+):
+    """NumPy vs CuPy (dispatched) numerical equivalence for morphology f(ar)."""
+    np_arrays = _make_binary_image(_SEED, np)
+    cp_arrays = _make_binary_image(_SEED, cupy)
     ref = func(*np_arrays)
     out = func(*cp_arrays)
     _assert_result_is_cupy(out, cupy)
