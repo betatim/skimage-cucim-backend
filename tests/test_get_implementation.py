@@ -29,6 +29,10 @@ FILTERS_CALL_PARAMS = [
     ("skimage.filters:sobel", (), {}, (7, 7)),
     ("skimage.filters:threshold_otsu", (), {}, None),  # scalar, image provided
     ("skimage.filters:threshold_otsu", (), {"hist": "build_in_test"}, None),  # scalar, hist provided
+    ("skimage.filters:difference_of_gaussians", (2, 10), {}, (7, 7)),
+    ("skimage.filters:prewitt", (), {}, (7, 7)),
+    ("skimage.filters:scharr", (), {}, (7, 7)),
+    ("skimage.filters:median", (), {}, (7, 7)),
 ]
 
 # (name, args, kwargs, expected_shape) for transform functions that return arrays.

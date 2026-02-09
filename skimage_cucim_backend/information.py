@@ -23,6 +23,10 @@ SUPPORTED_FUNCTIONS = [
     "skimage.filters:gaussian",
     "skimage.filters:sobel",
     "skimage.filters:threshold_otsu",
+    "skimage.filters:difference_of_gaussians",
+    "skimage.filters:prewitt",
+    "skimage.filters:scharr",
+    "skimage.filters:median",
 ]
 
 

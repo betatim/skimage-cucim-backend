@@ -39,3 +39,53 @@ def threshold_otsu(image=None, nbins=256, *, hist=None):
     return cucim_filters.threshold_otsu(
         image, nbins=nbins, hist=hist
     )
+
+
+def difference_of_gaussians(
+    image,
+    low_sigma,
+    high_sigma=None,
+    *,
+    mode='nearest',
+    cval=0,
+    channel_axis=None,
+    truncate=4.0,
+):
+    """CuCIM-backed difference_of_gaussians; same signature as skimage.filters.difference_of_gaussians."""
+    return cucim_filters.difference_of_gaussians(
+        image,
+        low_sigma,
+        high_sigma=high_sigma,
+        mode=mode,
+        cval=cval,
+        channel_axis=channel_axis,
+        truncate=truncate,
+    )
+
+
+def prewitt(image, mask=None, *, axis=None, mode='reflect', cval=0.0):
+    """CuCIM-backed prewitt; same signature as skimage.filters.prewitt."""
+    return cucim_filters.prewitt(
+        image, mask=mask, axis=axis, mode=mode, cval=cval
+    )
+
+
+def scharr(image, mask=None, *, axis=None, mode='reflect', cval=0.0):
+    """CuCIM-backed scharr; same signature as skimage.filters.scharr."""
+    return cucim_filters.scharr(
+        image, mask=mask, axis=axis, mode=mode, cval=cval
+    )
+
+
+def median(
+    image, footprint=None, out=None, mode='nearest', cval=0.0, behavior='ndimage'
+):
+    """CuCIM-backed median; same signature as skimage.filters.median."""
+    return cucim_filters.median(
+        image,
+        footprint=footprint,
+        out=out,
+        mode=mode,
+        cval=cval,
+        behavior=behavior,
+    )

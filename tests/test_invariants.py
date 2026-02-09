@@ -70,6 +70,10 @@ FILTER_INVARIANT_CALL_PARAMS = [
     ("skimage.filters:sobel", (), {}),
     ("skimage.filters:threshold_otsu", (), {}),
     ("skimage.filters:threshold_otsu", (), {"hist": make_hist_for_otsu(np)}),
+    ("skimage.filters:difference_of_gaussians", (2, 10), {}),
+    ("skimage.filters:prewitt", (), {}),
+    ("skimage.filters:scharr", (), {}),
+    ("skimage.filters:median", (), {}),
 ]
 
 # (name, args, kwargs) for transform functions: call impl(image, *args, **kwargs); returns array.

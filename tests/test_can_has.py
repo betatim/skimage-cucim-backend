@@ -55,6 +55,14 @@ CAN_HAS_PARAMS = [
     ("skimage.filters:sobel", False, False, {}, ()),
     ("skimage.filters:threshold_otsu", True, True, {}, ()),
     ("skimage.filters:threshold_otsu", False, False, {}, ()),
+    ("skimage.filters:difference_of_gaussians", True, True, {}, (2, 10)),
+    ("skimage.filters:difference_of_gaussians", False, False, {}, (2, 10)),
+    ("skimage.filters:prewitt", True, True, {}, ()),
+    ("skimage.filters:prewitt", False, False, {}, ()),
+    ("skimage.filters:scharr", True, True, {}, ()),
+    ("skimage.filters:scharr", False, False, {}, ()),
+    ("skimage.filters:median", True, True, {}, ()),
+    ("skimage.filters:median", False, False, {}, ()),
 ]
 
 
