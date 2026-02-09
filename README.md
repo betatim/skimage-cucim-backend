@@ -4,15 +4,20 @@ An experimental backend that dispatches scikit-image calls to [CuCIM](https://gi
 
 ## Installation
 
-Use conda (rapidsai and conda-forge) for the CUDA-related stack; it is simpler than mixing pip and conda. Install the backend with pip.
+For now, the dispatching mechanism lives in a development branch of scikit-image. To test-drive this backend (e.g. if you are a scikit-image developer or want to try GPU dispatch before it ships in a release), install that branch as below. Use conda for the CUDA stack and pip for scikit-image and the backend.
 
-1. Install **scikit-image** and **cucim** from conda (this brings in CuPy and a CUDA-compatible environment). Use the rapidsai channel first, then conda-forge:
+1. Install **cucim** from conda (this brings in CuPy and a CUDA-compatible environment). Use the rapidsai channel first, then conda-forge:
    ```bash
-   conda install -c rapidsai -c conda-forge scikit-image cucim
+   conda install -c rapidsai -c conda-forge cucim
    ```
-2. Install **skimage-cucim-backend** with pip: `pip install skimage-cucim-backend` (when published), or from a local clone: `pip install -e /path/to/skimage-cucim-backend`
+2. Install **scikit-image** from the branch that adds dispatching:
+   ```bash
+   pip install "git+https://github.com/betatim/scikit-image.git@more-dispatching"
+   ```
+   Branch: [more-dispatching](https://github.com/betatim/scikit-image/tree/more-dispatching).
+3. Install **skimage-cucim-backend** with pip: `pip install skimage-cucim-backend` (when published), or from a local clone: `pip install -e /path/to/skimage-cucim-backend`
 
-Install scikit-image and cucim from conda first (rapidsai and conda-forge) so you get a consistent CUDA stack; then install the backend with pip.
+Install cucim from conda first for a consistent CUDA stack; then install scikit-image from the branch and the backend with pip. To use a development version of scikit-image you need to [setup a build environment](https://scikit-image.org/docs/stable/user_guide/install.html#build-env-setup).
 
 ## How it works
 
