@@ -1,5 +1,7 @@
 # A cucim backend for scikit-image
 
+An experimental backend that dispatches scikit-image calls to cucim.
+
 ## Development
 
 Install with dev dependencies (includes ruff for formatting and linting):
