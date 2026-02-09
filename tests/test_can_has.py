@@ -55,6 +55,12 @@ CAN_HAS_PARAMS = [
     ("skimage.filters:sobel", False, False, {}, ()),
     ("skimage.filters:threshold_otsu", True, True, {}, ()),
     ("skimage.filters:threshold_otsu", False, False, {}, ()),
+    ("skimage.filters:threshold_li", True, True, {}, ()),
+    ("skimage.filters:threshold_li", False, False, {}, ()),
+    ("skimage.filters:threshold_yen", True, True, {}, ()),
+    ("skimage.filters:threshold_yen", False, False, {}, ()),
+    ("skimage.filters:threshold_isodata", True, True, {}, ()),
+    ("skimage.filters:threshold_isodata", False, False, {}, ()),
     ("skimage.filters:difference_of_gaussians", True, True, {}, (2, 10)),
     ("skimage.filters:difference_of_gaussians", False, False, {}, (2, 10)),
     ("skimage.filters:prewitt", True, True, {}, ()),
@@ -76,6 +82,20 @@ def test_can_has_threshold_otsu_hist_only(use_cupy, expected):
         xp = np
     hist = make_hist_for_otsu(xp)
     result = can_has("skimage.filters:threshold_otsu", hist=hist)
+    assert result is expected
+
+
+@pytest.mark.parametrize("name", ["skimage.filters:threshold_yen", "skimage.filters:threshold_isodata"])
+@pytest.mark.parametrize("use_cupy,expected", [(True, True), (False, False)])
+def test_can_has_threshold_hist_only(name, use_cupy, expected):
+    """can_has(threshold_yen/isodata) with hist=(counts, bin_centers): True if CuPy, False if NumPy."""
+    if use_cupy:
+        cupy = pytest.importorskip("cupy")
+        xp = cupy
+    else:
+        xp = np
+    hist = make_hist_for_otsu(xp)
+    result = can_has(name, hist=hist)
     assert result is expected
 
 

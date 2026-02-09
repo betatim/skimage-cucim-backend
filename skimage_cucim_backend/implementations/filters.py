@@ -41,6 +41,30 @@ def threshold_otsu(image=None, nbins=256, *, hist=None):
     )
 
 
+def threshold_li(image, *, tolerance=None, initial_guess=None, iter_callback=None):
+    """CuCIM-backed threshold_li; same signature as skimage.filters.threshold_li."""
+    return cucim_filters.threshold_li(
+        image,
+        tolerance=tolerance,
+        initial_guess=initial_guess,
+        iter_callback=iter_callback,
+    )
+
+
+def threshold_yen(image=None, nbins=256, *, hist=None):
+    """CuCIM-backed threshold_yen; same signature as skimage.filters.threshold_yen."""
+    return cucim_filters.threshold_yen(
+        image, nbins=nbins, hist=hist
+    )
+
+
+def threshold_isodata(image=None, nbins=256, return_all=False, *, hist=None):
+    """CuCIM-backed threshold_isodata; same signature as skimage.filters.threshold_isodata."""
+    return cucim_filters.threshold_isodata(
+        image, nbins=nbins, return_all=return_all, hist=hist
+    )
+
+
 def difference_of_gaussians(
     image,
     low_sigma,

@@ -106,6 +106,9 @@ SINGLE_IMAGE_CALLABLES = [
     ("gaussian_sigma", partial(_filters.gaussian, sigma=2.0)),
     ("sobel", partial(_filters.sobel)),
     ("threshold_otsu_image", partial(_filters.threshold_otsu)),
+    ("threshold_li", partial(_filters.threshold_li)),
+    ("threshold_yen", partial(_filters.threshold_yen)),
+    ("threshold_isodata", partial(_filters.threshold_isodata)),
     ("difference_of_gaussians", partial(_filters.difference_of_gaussians, low_sigma=2, high_sigma=10)),
     ("prewitt", partial(_filters.prewitt)),
     ("scharr", partial(_filters.scharr)),
@@ -138,7 +141,6 @@ def _numerical_equivalence_covered_dispatch_names():
             covered.add(name)
         elif scenario_id in _DISPATCH_NAME_FALLBACK:
             covered.add(_DISPATCH_NAME_FALLBACK[scenario_id])
-    covered.add("skimage.filters:threshold_otsu")  # test_numerical_equivalence_threshold_otsu_hist
     return covered
 
 
@@ -195,5 +197,27 @@ def test_numerical_equivalence_threshold_otsu_hist(cupy, require_cuda):
     cp_hist = make_hist_for_otsu(cupy, n=10)
     ref = _filters.threshold_otsu(hist=np_hist)
     out = _filters.threshold_otsu(hist=cp_hist)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+def test_numerical_equivalence_threshold_yen_hist(cupy, require_cuda):
+    """NumPy vs CuPy numerical equivalence for threshold_yen(hist=(counts, bin_centers))."""
+    np_hist = make_hist_for_otsu(np, n=10)
+    cp_hist = make_hist_for_otsu(cupy, n=10)
+    ref = _filters.threshold_yen(hist=np_hist)
+    out = _filters.threshold_yen(hist=cp_hist)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+def test_numerical_equivalence_threshold_isodata_hist(cupy, require_cuda):
+    """NumPy vs CuPy numerical equivalence for threshold_isodata(hist=(counts, bin_centers))."""
+    np_hist = make_hist_for_otsu(np, n=10)
+    cp_hist = make_hist_for_otsu(cupy, n=10)
+    ref = _filters.threshold_isodata(hist=np_hist)
+    out = _filters.threshold_isodata(hist=cp_hist)
     _assert_result_is_cupy(out, cupy)
     _assert_allclose(ref, out, cupy)

@@ -29,6 +29,11 @@ FILTERS_CALL_PARAMS = [
     ("skimage.filters:sobel", (), {}, (7, 7)),
     ("skimage.filters:threshold_otsu", (), {}, None),  # scalar, image provided
     ("skimage.filters:threshold_otsu", (), {"hist": "build_in_test"}, None),  # scalar, hist provided
+    ("skimage.filters:threshold_li", (), {}, None),
+    ("skimage.filters:threshold_yen", (), {}, None),
+    ("skimage.filters:threshold_yen", (), {"hist": "build_in_test"}, None),
+    ("skimage.filters:threshold_isodata", (), {}, None),
+    ("skimage.filters:threshold_isodata", (), {"hist": "build_in_test"}, None),
     ("skimage.filters:difference_of_gaussians", (2, 10), {}, (7, 7)),
     ("skimage.filters:prewitt", (), {}, (7, 7)),
     ("skimage.filters:scharr", (), {}, (7, 7)),
