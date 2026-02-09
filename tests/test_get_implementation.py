@@ -28,7 +28,12 @@ FILTERS_CALL_PARAMS = [
     ("skimage.filters:gaussian", (), {"sigma": 1.0}, (7, 7)),
     ("skimage.filters:sobel", (), {}, (7, 7)),
     ("skimage.filters:threshold_otsu", (), {}, None),  # scalar, image provided
-    ("skimage.filters:threshold_otsu", (), {"hist": "build_in_test"}, None),  # scalar, hist provided
+    (
+        "skimage.filters:threshold_otsu",
+        (),
+        {"hist": "build_in_test"},
+        None,
+    ),  # scalar, hist provided
     ("skimage.filters:threshold_li", (), {}, None),
     ("skimage.filters:threshold_yen", (), {}, None),
     ("skimage.filters:threshold_yen", (), {"hist": "build_in_test"}, None),
@@ -79,7 +84,9 @@ def test_metric_returns_0dim_cupy_array(name, args, kwargs, cupy, require_cuda):
 
 @pytest.mark.cupy
 @pytest.mark.parametrize("name,args,kwargs,expected_shape", TRANSFORM_CALL_PARAMS)
-def test_transform_returns_cupy_array_with_shape(name, args, kwargs, expected_shape, cupy, require_cuda):
+def test_transform_returns_cupy_array_with_shape(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
     """Backend transform with CuPy input returns a CuPy ndarray with the expected shape."""
     impl = get_implementation(name)
     rng = np.random.default_rng(42)
@@ -94,7 +101,9 @@ def test_transform_returns_cupy_array_with_shape(name, args, kwargs, expected_sh
 
 @pytest.mark.cupy
 @pytest.mark.parametrize("name,args,kwargs,expected_shape", FILTERS_CALL_PARAMS)
-def test_filter_returns_cupy_array(name, args, kwargs, expected_shape, cupy, require_cuda):
+def test_filter_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
     """Backend filter with CuPy input returns CuPy ndarray; shape or 0-dim for scalar."""
     impl = get_implementation(name)
     rng = np.random.default_rng(42)

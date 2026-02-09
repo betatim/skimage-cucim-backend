@@ -13,6 +13,11 @@ dependencies = [
     "cucim",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+]
+
 [project.entry-points.skimage_backend_infos]
 # Fast: returns backend metadata; must avoid heavy imports.
 cucim = "skimage_cucim_backend.information:info"
@@ -24,3 +29,12 @@ cucim = "skimage_cucim_backend.implementations"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["skimage_cucim_backend*"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+src = ["skimage_cucim_backend", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true

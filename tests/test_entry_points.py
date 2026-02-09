@@ -15,7 +15,9 @@ def test_backend_infos_entry_point_cucim():
         if ep.name == "cucim":
             cucim_info = ep
             break
-    assert cucim_info is not None, "Entry point cucim not found in skimage_backend_infos"
+    assert cucim_info is not None, (
+        "Entry point cucim not found in skimage_backend_infos"
+    )
     info_fn = cucim_info.load()
     backend_info = info_fn()
     assert hasattr(backend_info, "supported_functions")

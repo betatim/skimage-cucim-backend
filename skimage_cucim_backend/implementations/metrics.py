@@ -24,14 +24,28 @@ def peak_signal_noise_ratio(image_true, image_test, *, data_range=None):
 
 
 def structural_similarity(
-    im1, im2, *, win_size=None, gradient=False, data_range=None,
-    channel_axis=None, gaussian_weights=False, full=False, **kwargs
+    im1,
+    im2,
+    *,
+    win_size=None,
+    gradient=False,
+    data_range=None,
+    channel_axis=None,
+    gaussian_weights=False,
+    full=False,
+    **kwargs,
 ):
     """CuCIM-backed structural_similarity; same signature as skimage.metrics.structural_similarity."""
     return cucim_metrics.structural_similarity(
-        im1, im2, win_size=win_size, gradient=gradient, data_range=data_range,
-        channel_axis=channel_axis, gaussian_weights=gaussian_weights,
-        full=full, **kwargs
+        im1,
+        im2,
+        win_size=win_size,
+        gradient=gradient,
+        data_range=data_range,
+        channel_axis=channel_axis,
+        gaussian_weights=gaussian_weights,
+        full=full,
+        **kwargs,
     )
 
 

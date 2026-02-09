@@ -14,7 +14,9 @@ import skimage.transform as _transform
 import skimage.filters as _filters
 
 # Suppress "dispatched to backend" warnings in this module; they add noise when we expect dispatch.
-pytestmark = pytest.mark.filterwarnings(f"ignore::{DispatchNotification.__module__}.{DispatchNotification.__qualname__}")
+pytestmark = pytest.mark.filterwarnings(
+    f"ignore::{DispatchNotification.__module__}.{DispatchNotification.__qualname__}"
+)
 
 
 _SEED = 42
@@ -33,9 +35,13 @@ def _assert_result_is_cupy(result, cupy_module):
     """Assert that result (from a call with CuPy inputs) is a CuPy ndarray or tuple of CuPy ndarrays."""
     if isinstance(result, tuple):
         for r in result:
-            assert isinstance(r, cupy_module.ndarray), f"Expected cupy.ndarray, got {type(r)}"
+            assert isinstance(r, cupy_module.ndarray), (
+                f"Expected cupy.ndarray, got {type(r)}"
+            )
     else:
-        assert isinstance(result, cupy_module.ndarray), f"Expected cupy.ndarray, got {type(result)}"
+        assert isinstance(result, cupy_module.ndarray), (
+            f"Expected cupy.ndarray, got {type(result)}"
+        )
 
 
 def _assert_allclose(ref, out, cupy_module, rtol=_RTOL, atol=_ATOL):
@@ -65,15 +71,33 @@ def _make_one_image(seed, xp):
 METRICS_CALLABLES = [
     ("mean_squared_error", partial(_metrics.mean_squared_error)),
     ("normalized_root_mse", partial(_metrics.normalized_root_mse)),
-    ("normalized_root_mse_euclidean", partial(_metrics.normalized_root_mse, normalization="euclidean")),
-    ("normalized_root_mse_minmax", partial(_metrics.normalized_root_mse, normalization="min-max")),
-    ("normalized_root_mse_mean", partial(_metrics.normalized_root_mse, normalization="mean")),
+    (
+        "normalized_root_mse_euclidean",
+        partial(_metrics.normalized_root_mse, normalization="euclidean"),
+    ),
+    (
+        "normalized_root_mse_minmax",
+        partial(_metrics.normalized_root_mse, normalization="min-max"),
+    ),
+    (
+        "normalized_root_mse_mean",
+        partial(_metrics.normalized_root_mse, normalization="mean"),
+    ),
     ("peak_signal_noise_ratio", partial(_metrics.peak_signal_noise_ratio)),
-    ("peak_signal_noise_ratio_data_range", partial(_metrics.peak_signal_noise_ratio, data_range=1.0)),
+    (
+        "peak_signal_noise_ratio_data_range",
+        partial(_metrics.peak_signal_noise_ratio, data_range=1.0),
+    ),
     ("structural_similarity", partial(_metrics.structural_similarity, data_range=1.0)),
-    ("structural_similarity_win_size", partial(_metrics.structural_similarity, data_range=1.0, win_size=7)),
+    (
+        "structural_similarity_win_size",
+        partial(_metrics.structural_similarity, data_range=1.0, win_size=7),
+    ),
     ("normalized_mutual_information", partial(_metrics.normalized_mutual_information)),
-    ("normalized_mutual_information_bins", partial(_metrics.normalized_mutual_information, bins=10)),
+    (
+        "normalized_mutual_information_bins",
+        partial(_metrics.normalized_mutual_information, bins=10),
+    ),
 ]
 
 
@@ -109,14 +133,20 @@ SINGLE_IMAGE_CALLABLES = [
     ("threshold_li", partial(_filters.threshold_li)),
     ("threshold_yen", partial(_filters.threshold_yen)),
     ("threshold_isodata", partial(_filters.threshold_isodata)),
-    ("difference_of_gaussians", partial(_filters.difference_of_gaussians, low_sigma=2, high_sigma=10)),
+    (
+        "difference_of_gaussians",
+        partial(_filters.difference_of_gaussians, low_sigma=2, high_sigma=10),
+    ),
     ("prewitt", partial(_filters.prewitt)),
     ("scharr", partial(_filters.scharr)),
     ("median", partial(_filters.median)),
 ]
 
 # Callables that don't unwrap to a single skimage function (lambda, wrapper); map scenario_id -> dispatch name.
-_DISPATCH_NAME_FALLBACK = {"warp": "skimage.transform:warp", "integrate": "skimage.transform:integrate"}
+_DISPATCH_NAME_FALLBACK = {
+    "warp": "skimage.transform:warp",
+    "integrate": "skimage.transform:integrate",
+}
 
 
 def _dispatch_name_from_callable(func):

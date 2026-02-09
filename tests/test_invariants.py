@@ -18,10 +18,12 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
     module_path, func_name = rest.rsplit(":", maxsplit=1)
     if module_path == "metrics":
         import skimage.metrics as mod
+
         func = getattr(mod, func_name)
         return func(np_arrays[0], np_arrays[1], *args, **kwargs)
     if module_path == "transform":
         import skimage.transform as mod
+
         func = getattr(mod, func_name)
         if func_name == "integrate":
             ii = mod.integral_image(np_arrays[0])
@@ -29,6 +31,7 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
         return func(np_arrays[0], *args, **kwargs)
     if module_path == "filters":
         import skimage.filters as mod
+
         func = getattr(mod, func_name)
         return func(np_arrays[0], *args, **kwargs)
     raise LookupError(f"No reference implementation for: {name}")
@@ -97,6 +100,7 @@ TRANSFORM_INVARIANT_CALL_PARAMS = [
     ("skimage.transform:warp_polar", (), {"output_shape": (7, 7)}),
 ]
 
+
 def test_all_supported_functions_covered_in_invariant_call_params():
     """Every SUPPORTED_FUNCTIONS entry appears at least once in invariant call params."""
     param_names = (
@@ -114,7 +118,9 @@ def test_all_supported_functions_covered_in_invariant_call_params():
 # ---- Invariant 1: CuPy in -> CuPy out (0-dim array for these metrics) ----
 @pytest.mark.cupy
 @pytest.mark.parametrize("name,args,kwargs", INVARIANT_CALL_PARAMS)
-def test_invariant_cupy_in_cupy_out_scalar(name, args, kwargs, cupy, minimal_cupy_arrays_2d):
+def test_invariant_cupy_in_cupy_out_scalar(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
     """Backend returns 0-dim CuPy array for these metrics when CuPy in."""
     a, b = minimal_cupy_arrays_2d
     impl = get_implementation(name)
@@ -151,7 +157,9 @@ def test_invariant_no_numpy_filter(name, args, kwargs):
 # ---- Invariant 3: Shape/ndim of returned value matches scikit-image ----
 @pytest.mark.cupy
 @pytest.mark.parametrize("name,args,kwargs", INVARIANT_CALL_PARAMS)
-def test_invariant_shape_match_scalar_result(name, args, kwargs, cupy, minimal_cupy_arrays_2d):
+def test_invariant_shape_match_scalar_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
     """Backend return shape/ndim matches scikit-image for metrics (scalar/0-dim)."""
     a, b = minimal_cupy_arrays_2d
     np_a = np.asarray(cupy.asnumpy(a))
@@ -168,7 +176,9 @@ def test_invariant_shape_match_scalar_result(name, args, kwargs, cupy, minimal_c
 
 @pytest.mark.cupy
 @pytest.mark.parametrize("name,args,kwargs", TRANSFORM_INVARIANT_CALL_PARAMS)
-def test_invariant_shape_match_array_result(name, args, kwargs, cupy, minimal_cupy_arrays_2d):
+def test_invariant_shape_match_array_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
     """Backend return shape/ndim matches scikit-image for array output."""
     a, _ = minimal_cupy_arrays_2d
     np_a = np.asarray(cupy.asnumpy(a))
@@ -187,7 +197,9 @@ def test_invariant_shape_match_array_result(name, args, kwargs, cupy, minimal_cu
 
 @pytest.mark.cupy
 @pytest.mark.parametrize("name,args,kwargs", FILTER_INVARIANT_CALL_PARAMS)
-def test_invariant_shape_match_filter_result(name, args, kwargs, cupy, minimal_cupy_arrays_2d):
+def test_invariant_shape_match_filter_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
     """Backend return shape/ndim matches scikit-image for filter output."""
     impl = get_implementation(name)
     if "hist" in kwargs:

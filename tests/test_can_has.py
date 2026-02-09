@@ -14,7 +14,13 @@ CAN_HAS_PARAMS = [
     ("skimage.metrics:mean_squared_error", False, False, {}, None),
     ("skimage.metrics:normalized_root_mse", True, True, {}, None),
     ("skimage.metrics:normalized_root_mse", False, False, {}, None),
-    ("skimage.metrics:normalized_root_mse", True, True, {"normalization": "euclidean"}, None),
+    (
+        "skimage.metrics:normalized_root_mse",
+        True,
+        True,
+        {"normalization": "euclidean"},
+        None,
+    ),
     ("skimage.metrics:peak_signal_noise_ratio", True, True, {}, None),
     ("skimage.metrics:peak_signal_noise_ratio", False, False, {}, None),
     ("skimage.metrics:peak_signal_noise_ratio", True, True, {"data_range": 1.0}, None),
@@ -85,7 +91,9 @@ def test_can_has_threshold_otsu_hist_only(use_cupy, expected):
     assert result is expected
 
 
-@pytest.mark.parametrize("name", ["skimage.filters:threshold_yen", "skimage.filters:threshold_isodata"])
+@pytest.mark.parametrize(
+    "name", ["skimage.filters:threshold_yen", "skimage.filters:threshold_isodata"]
+)
 @pytest.mark.parametrize("use_cupy,expected", [(True, True), (False, False)])
 def test_can_has_threshold_hist_only(name, use_cupy, expected):
     """can_has(threshold_yen/isodata) with hist=(counts, bin_centers): True if CuPy, False if NumPy."""

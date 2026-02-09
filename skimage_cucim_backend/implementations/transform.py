@@ -7,7 +7,7 @@ def resize(
     image,
     output_shape,
     order=None,
-    mode='reflect',
+    mode="reflect",
     cval=0,
     clip=True,
     preserve_range=False,
@@ -32,7 +32,7 @@ def rescale(
     image,
     scale,
     order=None,
-    mode='reflect',
+    mode="reflect",
     cval=0,
     clip=True,
     preserve_range=False,
@@ -62,7 +62,7 @@ def rotate(
     resize=False,
     center=None,
     order=None,
-    mode='constant',
+    mode="constant",
     cval=0,
     clip=True,
     preserve_range=False,
@@ -87,7 +87,7 @@ def warp(
     map_args=None,
     output_shape=None,
     order=None,
-    mode='constant',
+    mode="constant",
     cval=0.0,
     clip=True,
     preserve_range=False,
@@ -121,9 +121,7 @@ def resize_local_mean(
 
 def downscale_local_mean(image, factors, cval=0, clip=True):
     """CuCIM-backed downscale_local_mean; same signature as skimage.transform.downscale_local_mean."""
-    return cucim_transform.downscale_local_mean(
-        image, factors, cval=cval, clip=clip
-    )
+    return cucim_transform.downscale_local_mean(image, factors, cval=cval, clip=clip)
 
 
 def integral_image(image, *, dtype=None):
@@ -141,7 +139,7 @@ def pyramid_reduce(
     downscale=2,
     sigma=None,
     order=1,
-    mode='reflect',
+    mode="reflect",
     cval=0,
     preserve_range=False,
     *,
@@ -165,7 +163,7 @@ def pyramid_expand(
     upscale=2,
     sigma=None,
     order=1,
-    mode='reflect',
+    mode="reflect",
     cval=0,
     preserve_range=False,
     *,
@@ -192,7 +190,7 @@ def swirl(
     rotation=0,
     output_shape=None,
     order=None,
-    mode='reflect',
+    mode="reflect",
     cval=0,
     clip=True,
     preserve_range=False,
@@ -219,7 +217,7 @@ def warp_polar(
     *,
     radius=None,
     output_shape=None,
-    scaling='linear',
+    scaling="linear",
     channel_axis=None,
     **kwargs,
 ):
@@ -233,5 +231,3 @@ def warp_polar(
         channel_axis=channel_axis,
         **kwargs,
     )
-
-

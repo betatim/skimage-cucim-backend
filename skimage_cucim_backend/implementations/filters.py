@@ -7,7 +7,7 @@ def gaussian(
     image,
     sigma=1.0,
     *,
-    mode='nearest',
+    mode="nearest",
     cval=0,
     preserve_range=False,
     truncate=4.0,
@@ -27,18 +27,14 @@ def gaussian(
     )
 
 
-def sobel(image, mask=None, *, axis=None, mode='reflect', cval=0.0):
+def sobel(image, mask=None, *, axis=None, mode="reflect", cval=0.0):
     """CuCIM-backed sobel; same signature as skimage.filters.sobel."""
-    return cucim_filters.sobel(
-        image, mask=mask, axis=axis, mode=mode, cval=cval
-    )
+    return cucim_filters.sobel(image, mask=mask, axis=axis, mode=mode, cval=cval)
 
 
 def threshold_otsu(image=None, nbins=256, *, hist=None):
     """CuCIM-backed threshold_otsu; same signature as skimage.filters.threshold_otsu."""
-    return cucim_filters.threshold_otsu(
-        image, nbins=nbins, hist=hist
-    )
+    return cucim_filters.threshold_otsu(image, nbins=nbins, hist=hist)
 
 
 def threshold_li(image, *, tolerance=None, initial_guess=None, iter_callback=None):
@@ -53,9 +49,7 @@ def threshold_li(image, *, tolerance=None, initial_guess=None, iter_callback=Non
 
 def threshold_yen(image=None, nbins=256, *, hist=None):
     """CuCIM-backed threshold_yen; same signature as skimage.filters.threshold_yen."""
-    return cucim_filters.threshold_yen(
-        image, nbins=nbins, hist=hist
-    )
+    return cucim_filters.threshold_yen(image, nbins=nbins, hist=hist)
 
 
 def threshold_isodata(image=None, nbins=256, return_all=False, *, hist=None):
@@ -70,7 +64,7 @@ def difference_of_gaussians(
     low_sigma,
     high_sigma=None,
     *,
-    mode='nearest',
+    mode="nearest",
     cval=0,
     channel_axis=None,
     truncate=4.0,
@@ -87,22 +81,18 @@ def difference_of_gaussians(
     )
 
 
-def prewitt(image, mask=None, *, axis=None, mode='reflect', cval=0.0):
+def prewitt(image, mask=None, *, axis=None, mode="reflect", cval=0.0):
     """CuCIM-backed prewitt; same signature as skimage.filters.prewitt."""
-    return cucim_filters.prewitt(
-        image, mask=mask, axis=axis, mode=mode, cval=cval
-    )
+    return cucim_filters.prewitt(image, mask=mask, axis=axis, mode=mode, cval=cval)
 
 
-def scharr(image, mask=None, *, axis=None, mode='reflect', cval=0.0):
+def scharr(image, mask=None, *, axis=None, mode="reflect", cval=0.0):
     """CuCIM-backed scharr; same signature as skimage.filters.scharr."""
-    return cucim_filters.scharr(
-        image, mask=mask, axis=axis, mode=mode, cval=cval
-    )
+    return cucim_filters.scharr(image, mask=mask, axis=axis, mode=mode, cval=cval)
 
 
 def median(
-    image, footprint=None, out=None, mode='nearest', cval=0.0, behavior='ndimage'
+    image, footprint=None, out=None, mode="nearest", cval=0.0, behavior="ndimage"
 ):
     """CuCIM-backed median; same signature as skimage.filters.median."""
     return cucim_filters.median(

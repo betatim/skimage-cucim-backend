@@ -18,6 +18,7 @@ def _cuda_available():
     """Return True if CuPy is importable and can run a minimal GPU op (CUDA available)."""
     try:
         import cupy as cp
+
         x = cp.array([1.0])
         _ = x + 1  # triggers kernel
         return True
@@ -42,6 +43,7 @@ def require_cuda():
 def minimal_cupy_arrays_2d(cupy, require_cuda):
     """2D CuPy arrays for metrics (same shape). 7x7 so structural_similarity default win_size=7 works."""
     import numpy as np
+
     rng = np.random.default_rng(42)
     a = cupy.array(rng.random((7, 7), dtype=np.float64))
     b = cupy.array(rng.random((7, 7), dtype=np.float64))

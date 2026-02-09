@@ -41,23 +41,29 @@ def test_looks_like_array_plain_objects():
 
 def test_looks_like_array_only_ndim():
     """Object with ndim but no shape is not array-like."""
+
     class OnlyNdim:
         ndim = 2
+
     assert not _looks_like_array(OnlyNdim())
 
 
 def test_looks_like_array_only_shape():
     """Object with shape but no ndim is not array-like."""
+
     class OnlyShape:
         shape = (3, 4)
+
     assert not _looks_like_array(OnlyShape())
 
 
 def test_looks_like_array_mock_array_like():
     """Object with both ndim and shape is array-like."""
+
     class ArrayLike:
         ndim = 2
         shape = (3, 4)
+
     assert _looks_like_array(ArrayLike())
 
 
@@ -229,21 +235,29 @@ def test_get_implementation_unsupported_raises():
 def test_get_implementation_unknown_module_path_raises():
     """When SUPPORTED_FUNCTIONS includes a name with unknown module path, raises LookupError."""
     name = "skimage.other:foo"
-    with patch.object(impl_mod, "SUPPORTED_FUNCTIONS", list(SUPPORTED_FUNCTIONS) + [name]):
+    with patch.object(
+        impl_mod, "SUPPORTED_FUNCTIONS", list(SUPPORTED_FUNCTIONS) + [name]
+    ):
         with pytest.raises(LookupError, match="No implementation for module path"):
             get_implementation(name)
 
 
 def test_get_implementation_missing_function_in_module_raises():
     """When the resolved module does not define the function, raises LookupError."""
+
     # Patch import_module to return a mock module where getattr(..., func_name, None) is None
     def fake_import_module(path):
         if path == "skimage_cucim_backend.implementations.metrics":
             mod = MagicMock()
-            mod.mean_squared_error = None  # getattr(mod, "mean_squared_error", None) -> None
+            mod.mean_squared_error = (
+                None  # getattr(mod, "mean_squared_error", None) -> None
+            )
             return mod
         return importlib.import_module(path)
 
-    with patch("skimage_cucim_backend.implementations.importlib.import_module", side_effect=fake_import_module):
+    with patch(
+        "skimage_cucim_backend.implementations.importlib.import_module",
+        side_effect=fake_import_module,
+    ):
         with pytest.raises(LookupError, match="No implementation for:"):
             get_implementation("skimage.metrics:mean_squared_error")

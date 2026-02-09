@@ -29,6 +29,7 @@ def _first_array_from_args(args, kwargs):
 
     Looks inside tuples/lists (e.g. hist=(counts, bin_centers) for threshold_otsu).
     """
+
     def first_array_in(obj):
         if obj is None:
             return None
@@ -74,7 +75,9 @@ def get_implementation(name):
     module_path, func_name = rest.rsplit(":", maxsplit=1)
 
     if module_path in ("metrics", "transform", "filters"):
-        mod = importlib.import_module(f"skimage_cucim_backend.implementations.{module_path}")
+        mod = importlib.import_module(
+            f"skimage_cucim_backend.implementations.{module_path}"
+        )
     else:
         raise LookupError(f"No implementation for module path: {module_path}")
 
