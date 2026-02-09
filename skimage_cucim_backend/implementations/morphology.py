@@ -46,7 +46,9 @@ def binary_closing(image, footprint=None, out=None, *, mode="ignore"):
     )
 
 
-def remove_small_objects(ar, min_size=_MISSING, connectivity=1, *, max_size=63, out=None):
+def remove_small_objects(
+    ar, min_size=_MISSING, connectivity=1, *, max_size=63, out=None
+):
     """CuCIM-backed remove_small_objects; same signature as skimage.morphology.remove_small_objects.
 
     CuCIM uses min_size (remove objects smaller than min_size); scikit-image uses
@@ -62,7 +64,9 @@ def remove_small_objects(ar, min_size=_MISSING, connectivity=1, *, max_size=63, 
     )
 
 
-def remove_small_holes(ar, area_threshold=_MISSING, connectivity=1, *, max_size=63, out=None):
+def remove_small_holes(
+    ar, area_threshold=_MISSING, connectivity=1, *, max_size=63, out=None
+):
     """CuCIM-backed remove_small_holes; same signature as skimage.morphology.remove_small_holes.
 
     CuCIM uses area_threshold (fill holes with area <= area_threshold); scikit-image

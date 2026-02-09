@@ -91,7 +91,14 @@ def get_implementation(name):
     _, rest = name.split(".", maxsplit=1)
     module_path, func_name = rest.rsplit(":", maxsplit=1)
 
-    if module_path in ("metrics", "transform", "filters", "feature", "exposure", "morphology"):
+    if module_path in (
+        "metrics",
+        "transform",
+        "filters",
+        "feature",
+        "exposure",
+        "morphology",
+    ):
         mod = importlib.import_module(
             f"skimage_cucim_backend.implementations.{module_path}"
         )

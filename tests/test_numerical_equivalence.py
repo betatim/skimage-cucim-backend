@@ -319,9 +319,7 @@ def test_numerical_equivalence_f_im_reference(scenario_id, func, cupy, require_c
     MORPHOLOGY_CALLABLES,
     ids=[p[0] for p in MORPHOLOGY_CALLABLES],
 )
-def test_numerical_equivalence_f_im_morphology(
-    scenario_id, func, cupy, require_cuda
-):
+def test_numerical_equivalence_f_im_morphology(scenario_id, func, cupy, require_cuda):
     """NumPy vs CuPy (dispatched) numerical equivalence for morphology f(ar)."""
     np_arrays = _make_binary_image(_SEED, np)
     cp_arrays = _make_binary_image(_SEED, cupy)
