@@ -4,7 +4,7 @@ import pytest
 
 import numpy as np
 
-from skimage_cucim_backend._testing import identity_map
+from skimage_cucim_backend._testing import identity_map, make_hist_for_otsu
 from skimage_cucim_backend.implementations import get_implementation
 from skimage_cucim_backend.information import SUPPORTED_FUNCTIONS
 
@@ -20,6 +20,15 @@ METRIC_CALL_PARAMS = [
     ("skimage.metrics:structural_similarity", (), {"data_range": 1.0, "win_size": 7}),
     ("skimage.metrics:normalized_mutual_information", (), {}),
     ("skimage.metrics:normalized_mutual_information", (), {"bins": 10}),
+]
+
+# (name, args, kwargs, expected_shape) for filter functions. expected_shape=None means scalar (0-dim).
+# For threshold_otsu: first row = image provided; second row = hist provided (no image).
+FILTERS_CALL_PARAMS = [
+    ("skimage.filters:gaussian", (), {"sigma": 1.0}, (7, 7)),
+    ("skimage.filters:sobel", (), {}, (7, 7)),
+    ("skimage.filters:threshold_otsu", (), {}, None),  # scalar, image provided
+    ("skimage.filters:threshold_otsu", (), {"hist": "build_in_test"}, None),  # scalar, hist provided
 ]
 
 # (name, args, kwargs, expected_shape) for transform functions that return arrays.
@@ -72,6 +81,26 @@ def test_transform_returns_cupy_array_with_shape(name, args, kwargs, expected_sh
     result = impl(image, *args, **kwargs)
     assert isinstance(result, cupy.ndarray)
     assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", FILTERS_CALL_PARAMS)
+def test_filter_returns_cupy_array(name, args, kwargs, expected_shape, cupy, require_cuda):
+    """Backend filter with CuPy input returns CuPy ndarray; shape or 0-dim for scalar."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    # threshold_otsu(hist=...) case: no image, build hist with CuPy
+    if kwargs.get("hist") == "build_in_test":
+        kwargs = {"hist": make_hist_for_otsu(cupy)}
+        result = impl(None, *args, **kwargs)
+    else:
+        image = cupy.array(rng.random((7, 7), dtype=np.float64))
+        result = impl(image, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    if expected_shape is None:
+        assert result.ndim == 0
+    else:
+        assert result.shape == expected_shape
 
 
 def test_get_implementation_unsupported_raises():

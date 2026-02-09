@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from skimage_cucim_backend._testing import identity_map
+from skimage_cucim_backend._testing import identity_map, make_hist_for_otsu
 from skimage_cucim_backend.implementations import can_has
 from skimage_cucim_backend.information import SUPPORTED_FUNCTIONS
 
@@ -49,7 +49,26 @@ CAN_HAS_PARAMS = [
     ("skimage.transform:swirl", False, False, {}, ()),
     ("skimage.transform:warp_polar", True, True, {"output_shape": (7, 7)}, ()),
     ("skimage.transform:warp_polar", False, False, {"output_shape": (7, 7)}, ()),
+    ("skimage.filters:gaussian", True, True, {}, ()),
+    ("skimage.filters:gaussian", False, False, {}, ()),
+    ("skimage.filters:sobel", True, True, {}, ()),
+    ("skimage.filters:sobel", False, False, {}, ()),
+    ("skimage.filters:threshold_otsu", True, True, {}, ()),
+    ("skimage.filters:threshold_otsu", False, False, {}, ()),
 ]
+
+
+@pytest.mark.parametrize("use_cupy,expected", [(True, True), (False, False)])
+def test_can_has_threshold_otsu_hist_only(use_cupy, expected):
+    """can_has(threshold_otsu) with hist=(counts, bin_centers): True if CuPy, False if NumPy."""
+    if use_cupy:
+        cupy = pytest.importorskip("cupy")
+        xp = cupy
+    else:
+        xp = np
+    hist = make_hist_for_otsu(xp)
+    result = can_has("skimage.filters:threshold_otsu", hist=hist)
+    assert result is expected
 
 
 @pytest.mark.parametrize("name,use_cupy,expected,kwargs,extra_args", CAN_HAS_PARAMS)

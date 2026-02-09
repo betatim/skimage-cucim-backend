@@ -20,6 +20,9 @@ SUPPORTED_FUNCTIONS = [
     "skimage.transform:pyramid_expand",
     "skimage.transform:swirl",
     "skimage.transform:warp_polar",
+    "skimage.filters:gaussian",
+    "skimage.filters:sobel",
+    "skimage.filters:threshold_otsu",
 ]
 
 

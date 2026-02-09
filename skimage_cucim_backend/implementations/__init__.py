@@ -25,13 +25,30 @@ def _looks_like_array(obj):
 
 
 def _first_array_from_args(args, kwargs):
-    """Return the first argument that looks like an array (has ndim and shape)."""
+    """Return the first argument that looks like an array (has ndim and shape).
+
+    Looks inside tuples/lists (e.g. hist=(counts, bin_centers) for threshold_otsu).
+    """
+    def first_array_in(obj):
+        if obj is None:
+            return None
+        if _looks_like_array(obj):
+            return obj
+        if isinstance(obj, (tuple, list)):
+            for item in obj:
+                found = first_array_in(item)
+                if found is not None:
+                    return found
+        return None
+
     for obj in args:
-        if _looks_like_array(obj):
-            return obj
+        found = first_array_in(obj)
+        if found is not None:
+            return found
     for obj in kwargs.values():
-        if _looks_like_array(obj):
-            return obj
+        found = first_array_in(obj)
+        if found is not None:
+            return found
     return None
 
 
@@ -55,12 +72,12 @@ def get_implementation(name):
     # Parse "skimage.metrics:mean_squared_error" -> module path + func name
     _, rest = name.split(".", maxsplit=1)
     module_path, func_name = rest.rsplit(":", maxsplit=1)
-    if module_path == "metrics":
-        mod = importlib.import_module("skimage_cucim_backend.implementations.metrics")
-    elif module_path == "transform":
-        mod = importlib.import_module("skimage_cucim_backend.implementations.transform")
+
+    if module_path in ("metrics", "transform", "filters"):
+        mod = importlib.import_module(f"skimage_cucim_backend.implementations.{module_path}")
     else:
         raise LookupError(f"No implementation for module path: {module_path}")
+
     func = getattr(mod, func_name, None)
     if func is None:
         raise LookupError(f"No implementation for: {name}")
