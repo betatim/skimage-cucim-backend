@@ -3,6 +3,7 @@
 import pytest
 
 import numpy as np
+import skimage.color as _color
 
 from skimage_cucim_backend._testing import identity_map, make_hist_for_otsu
 from skimage_cucim_backend.implementations import get_implementation
@@ -56,12 +57,57 @@ SEGMENTATION_CALL_PARAMS = [
     ("skimage.segmentation:find_boundaries", (), {}, (7, 7)),
     ("skimage.segmentation:join_segmentations", (), {}, (7, 7)),
     ("skimage.segmentation:relabel_sequential", (), {}, (7, 7)),
+    ("skimage.segmentation:mark_boundaries", (), {}, (7, 7, 3)),
 ]
 
 # (name, args, kwargs, expected_shape) for measure. label: expected_shape (7,7) or None when return_num=True (then result is tuple).
 MEASURE_CALL_PARAMS = [
     ("skimage.measure:label", (), {}, (7, 7)),
     ("skimage.measure:label", (), {"return_num": True}, None),  # returns (array, int)
+]
+
+# (name, args, kwargs, expected_shape) for util.
+# montage: (K, M, N) input -> grid output; crop: (7,7) crop 1 -> (5,5); random_noise: same shape.
+UTIL_CALL_PARAMS = [
+    ("skimage.util:invert", (), {}, (7, 7)),
+    ("skimage.util:compare_images", (), {}, (7, 7)),
+    (
+        "skimage.util:montage",
+        (),
+        {},
+        (10, 10),
+    ),  # (4, 5, 5) with grid_shape=(2, 2) -> 10x10
+    ("skimage.util:crop", (1,), {}, (5, 5)),  # (7, 7) crop_width=1 -> (5, 5)
+    ("skimage.util:random_noise", (), {}, (7, 7)),
+    (
+        "skimage.util:view_as_blocks",
+        ((2, 2),),
+        {},
+        (3, 3, 2, 2),
+    ),  # (6, 6) -> blocks (3,3,2,2)
+    (
+        "skimage.util:view_as_windows",
+        ((2, 2),),
+        {},
+        (5, 5, 2, 2),
+    ),  # (6, 6) -> windows (5,5,2,2)
+]
+
+# (name, args, kwargs, expected_shape) for color. rgb2gray (7,7,3)->(7,7); gray2rgb (7,7)->(7,7,3); label2rgb (7,7)->(7,7,3).
+COLOR_CALL_PARAMS = [
+    ("skimage.color:rgb2gray", (), {}, (7, 7)),
+    ("skimage.color:gray2rgb", (), {}, (7, 7, 3)),
+    ("skimage.color:label2rgb", (), {}, (7, 7, 3)),
+    ("skimage.color:rgb2hsv", (), {}, (7, 7, 3)),
+    ("skimage.color:hsv2rgb", (), {}, (7, 7, 3)),
+    ("skimage.color:rgb2lab", (), {}, (7, 7, 3)),
+    ("skimage.color:lab2rgb", (), {}, (7, 7, 3)),
+]
+
+# (name, args, kwargs, expected_shape) for restoration.
+RESTORATION_CALL_PARAMS = [
+    ("skimage.restoration:denoise_tv_chambolle", (), {}, (7, 7)),
+    ("skimage.restoration:richardson_lucy", (), {}, (7, 7)),
 ]
 
 # (name, args, kwargs, expected_shape) for morphology functions (all return same shape as input (7,7)).
@@ -179,7 +225,10 @@ def test_segmentation_returns_cupy_array(
     impl = get_implementation(name)
     rng = np.random.default_rng(42)
     label_im = cupy.array((rng.random((7, 7)) * 3).astype(np.int32))
-    if "join_segmentations" in name:
+    if "mark_boundaries" in name:
+        image = cupy.array(rng.random((7, 7), dtype=np.float64))
+        result = impl(image, label_im, *args, **kwargs)
+    elif "join_segmentations" in name:
         label_im2 = cupy.array((rng.random((7, 7)) * 2).astype(np.int32))
         result = impl(label_im, label_im2, *args, **kwargs)
     else:
@@ -192,6 +241,83 @@ def test_segmentation_returns_cupy_array(
     else:
         assert isinstance(result, cupy.ndarray)
         assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", UTIL_CALL_PARAMS)
+def test_util_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend util with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    if "montage" in name:
+        # (4, 5, 5) -> grid_shape=(2, 2) -> 10x10
+        a = cupy.array(rng.random((4, 5, 5), dtype=np.float64))
+        result = impl(a, *args, **kwargs)
+    elif "compare_images" in name:
+        a = cupy.array(rng.random((7, 7), dtype=np.float64))
+        b = cupy.array(rng.random((7, 7), dtype=np.float64))
+        result = impl(a, b, *args, **kwargs)
+    elif "view_as_blocks" in name or "view_as_windows" in name:
+        # (6, 6) divisible by (2, 2)
+        a = cupy.array(rng.random((6, 6), dtype=np.float64))
+        result = impl(a, *args, **kwargs)
+    else:
+        a = cupy.array(rng.random((7, 7), dtype=np.float64))
+        result = impl(a, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", COLOR_CALL_PARAMS)
+def test_color_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend color with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    if "rgb2gray" in name:
+        rgb = cupy.array(rng.random((7, 7, 3), dtype=np.float64))
+        result = impl(rgb, *args, **kwargs)
+    elif "gray2rgb" in name:
+        gray = cupy.array(rng.random((7, 7), dtype=np.float64))
+        result = impl(gray, *args, **kwargs)
+    elif "label2rgb" in name:
+        label_im = cupy.array((rng.random((7, 7)) * 4).astype(np.int32))
+        result = impl(label_im, *args, **kwargs)
+    elif "hsv2rgb" in name:
+        hsv = cupy.array(rng.random((7, 7, 3), dtype=np.float64))
+        result = impl(hsv, *args, **kwargs)
+    elif "lab2rgb" in name:
+        # In-gamut LAB (from sRGB) to avoid clip/warning
+        rgb = np.asarray(rng.random((7, 7, 3), dtype=np.float64))
+        lab = _color.rgb2lab(rgb)
+        result = impl(cupy.array(lab), *args, **kwargs)
+    else:
+        rgb = cupy.array(rng.random((7, 7, 3), dtype=np.float64))
+        result = impl(rgb, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs,expected_shape", RESTORATION_CALL_PARAMS)
+def test_restoration_returns_cupy_array(
+    name, args, kwargs, expected_shape, cupy, require_cuda
+):
+    """Backend restoration with CuPy input returns CuPy ndarray with expected shape."""
+    impl = get_implementation(name)
+    rng = np.random.default_rng(42)
+    image = cupy.array(rng.random((7, 7), dtype=np.float64))
+    if "richardson_lucy" in name:
+        psf = cupy.array(np.ones((3, 3)) / 9.0, dtype=np.float64)
+        result = impl(image, psf, *args, **kwargs)
+    else:
+        result = impl(image, *args, **kwargs)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
 
 
 @pytest.mark.cupy

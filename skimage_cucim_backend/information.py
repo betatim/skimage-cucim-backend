@@ -1,7 +1,7 @@
 """Backend info: fast, no heavy imports."""
 
-from skimage.util._backends import BackendInformation
-
+# BackendInformation imported lazily in info() to avoid circular import when
+# skimage.util is loaded (util modules use @dispatchable which may call all_backends()).
 SUPPORTED_FUNCTIONS = [
     "skimage.metrics:mean_squared_error",
     "skimage.metrics:normalized_root_mse",
@@ -54,10 +54,29 @@ SUPPORTED_FUNCTIONS = [
     "skimage.segmentation:find_boundaries",
     "skimage.segmentation:join_segmentations",
     "skimage.segmentation:relabel_sequential",
+    "skimage.segmentation:mark_boundaries",
     "skimage.measure:label",
+    "skimage.util:invert",
+    "skimage.util:compare_images",
+    "skimage.util:montage",
+    "skimage.util:crop",
+    "skimage.util:random_noise",
+    "skimage.util:view_as_blocks",
+    "skimage.util:view_as_windows",
+    "skimage.color:rgb2gray",
+    "skimage.color:gray2rgb",
+    "skimage.color:label2rgb",
+    "skimage.color:rgb2hsv",
+    "skimage.color:hsv2rgb",
+    "skimage.color:rgb2lab",
+    "skimage.color:lab2rgb",
+    "skimage.restoration:denoise_tv_chambolle",
+    "skimage.restoration:richardson_lucy",
 ]
 
 
 def info():
     """Return backend metadata. Must be fast; avoid importing cucim/cupy here."""
+    from skimage.util._backends import BackendInformation
+
     return BackendInformation(SUPPORTED_FUNCTIONS)

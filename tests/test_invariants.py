@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+import skimage.color as _color
 
 from skimage_cucim_backend._testing import identity_map, make_hist_for_otsu
 from skimage_cucim_backend.implementations import can_has, get_implementation
@@ -59,11 +60,34 @@ def _skimage_reference_result(name, np_arrays, args, kwargs):
         func = getattr(mod, func_name)
         if func_name == "join_segmentations":
             return func(np_arrays[0], np_arrays[1], *args, **kwargs)
+        if func_name == "mark_boundaries":
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
         return func(np_arrays[0], *args, **kwargs)
     if module_path == "measure":
         import skimage.measure as mod
 
         func = getattr(mod, func_name)
+        return func(np_arrays[0], *args, **kwargs)
+    if module_path == "util":
+        import skimage.util as mod
+
+        func = getattr(mod, func_name)
+        if func_name == "compare_images":
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
+        return func(np_arrays[0], *args, **kwargs)
+    if module_path == "color":
+        import skimage.color as mod
+
+        func = getattr(mod, func_name)
+        if func_name == "label2rgb" and len(np_arrays) >= 2:
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
+        return func(np_arrays[0], *args, **kwargs)
+    if module_path == "restoration":
+        import skimage.restoration as mod
+
+        func = getattr(mod, func_name)
+        if func_name == "richardson_lucy" and len(np_arrays) >= 2:
+            return func(np_arrays[0], np_arrays[1], *args, **kwargs)
         return func(np_arrays[0], *args, **kwargs)
     raise LookupError(f"No reference implementation for: {name}")
 
@@ -167,6 +191,37 @@ SEGMENTATION_INVARIANT_CALL_PARAMS = [
     ("skimage.segmentation:join_segmentations", (), {"return_mapping": True}),
     ("skimage.segmentation:relabel_sequential", (), {}),
     ("skimage.segmentation:relabel_sequential", (), {"offset": 5}),
+    ("skimage.segmentation:mark_boundaries", (), {}),
+    ("skimage.segmentation:mark_boundaries", (), {"mode": "inner"}),
+]
+
+# (name, args, kwargs) for util: call impl(image, *args, **kwargs) or impl(im0, im1, *args, **kwargs).
+UTIL_INVARIANT_CALL_PARAMS = [
+    ("skimage.util:invert", (), {}),
+    ("skimage.util:compare_images", (), {}),
+    ("skimage.util:montage", (), {}),
+    ("skimage.util:montage", (), {"grid_shape": (2, 2)}),
+    ("skimage.util:crop", (1,), {}),
+    ("skimage.util:random_noise", (), {}),
+    ("skimage.util:view_as_blocks", ((2, 2),), {}),
+    ("skimage.util:view_as_windows", ((2, 2),), {}),
+]
+
+# (name, args, kwargs) for color: call impl(array, *args, **kwargs).
+COLOR_INVARIANT_CALL_PARAMS = [
+    ("skimage.color:rgb2gray", (), {}),
+    ("skimage.color:gray2rgb", (), {}),
+    ("skimage.color:label2rgb", (), {}),
+    ("skimage.color:rgb2hsv", (), {}),
+    ("skimage.color:hsv2rgb", (), {}),
+    ("skimage.color:rgb2lab", (), {}),
+    ("skimage.color:lab2rgb", (), {}),
+]
+
+# (name, args, kwargs) for restoration.
+RESTORATION_INVARIANT_CALL_PARAMS = [
+    ("skimage.restoration:denoise_tv_chambolle", (), {}),
+    ("skimage.restoration:richardson_lucy", (), {}),
 ]
 
 # (name, args, kwargs) for measure: call impl(image, *args, **kwargs).
@@ -212,6 +267,9 @@ def test_all_supported_functions_covered_in_invariant_call_params():
         | {name for name, _, _ in FEATURE_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in TRANSFORM_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in SEGMENTATION_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in UTIL_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in COLOR_INVARIANT_CALL_PARAMS}
+        | {name for name, _, _ in RESTORATION_INVARIANT_CALL_PARAMS}
         | {name for name, _, _ in MEASURE_INVARIANT_CALL_PARAMS}
     )
     for fn in SUPPORTED_FUNCTIONS:
@@ -219,7 +277,7 @@ def test_all_supported_functions_covered_in_invariant_call_params():
             f"{fn} missing from INVARIANT_CALL_PARAMS, "
             f"FILTER_INVARIANT_CALL_PARAMS, MORPHOLOGY_INVARIANT_CALL_PARAMS, "
             f"EXPOSURE_INVARIANT_CALL_PARAMS, FEATURE_INVARIANT_CALL_PARAMS, "
-            f"TRANSFORM_INVARIANT_CALL_PARAMS, SEGMENTATION_INVARIANT_CALL_PARAMS, or MEASURE_INVARIANT_CALL_PARAMS"
+            f"TRANSFORM_INVARIANT_CALL_PARAMS, SEGMENTATION_INVARIANT_CALL_PARAMS, UTIL_INVARIANT_CALL_PARAMS, COLOR_INVARIANT_CALL_PARAMS, RESTORATION_INVARIANT_CALL_PARAMS, or MEASURE_INVARIANT_CALL_PARAMS"
         )
 
 
@@ -303,6 +361,9 @@ def test_invariant_no_numpy_segmentation(name, args, kwargs):
     if "join_segmentations" in name:
         label_image2 = np.array([[0, 0, 1], [0, 1, 1], [1, 1, 0]], dtype=np.int32)
         assert not can_has(name, label_image, label_image2, *args, **kwargs)
+    elif "mark_boundaries" in name:
+        image = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
+        assert not can_has(name, image, label_image, *args, **kwargs)
     else:
         assert not can_has(name, label_image, *args, **kwargs)
 
@@ -312,6 +373,49 @@ def test_invariant_no_numpy_measure(name, args, kwargs):
     """can_has returns False for NumPy array inputs (measure: label image)."""
     image = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.int32)
     assert not can_has(name, image, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", UTIL_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_util(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (util)."""
+    if "compare_images" in name:
+        a = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
+        b = np.array([[0.5, 0.6], [0.7, 0.8]], dtype=np.float64)
+        assert not can_has(name, a, b, *args, **kwargs)
+    elif "montage" in name:
+        a = np.random.rand(4, 5, 5).astype(np.float64)
+        assert not can_has(name, a, *args, **kwargs)
+    elif "view_as_blocks" in name or "view_as_windows" in name:
+        a = np.random.rand(6, 6).astype(np.float64)
+        assert not can_has(name, a, *args, **kwargs)
+    else:
+        a = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
+        assert not can_has(name, a, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", COLOR_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_color(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (color)."""
+    if "rgb2gray" in name or "rgb2hsv" in name or "rgb2lab" in name:
+        a = np.random.rand(5, 5, 3).astype(np.float64)
+    elif "gray2rgb" in name:
+        a = np.random.rand(5, 5).astype(np.float64)
+    elif "hsv2rgb" in name or "lab2rgb" in name:
+        a = np.random.rand(5, 5, 3).astype(np.float64)
+    else:
+        a = (np.random.rand(5, 5) * 4).astype(np.int32)
+    assert not can_has(name, a, *args, **kwargs)
+
+
+@pytest.mark.parametrize("name,args,kwargs", RESTORATION_INVARIANT_CALL_PARAMS)
+def test_invariant_no_numpy_restoration(name, args, kwargs):
+    """can_has returns False for NumPy array inputs (restoration)."""
+    image = np.random.rand(5, 5).astype(np.float64)
+    if "richardson_lucy" in name:
+        psf = np.ones((3, 3)) / 9.0
+        assert not can_has(name, image, psf, *args, **kwargs)
+    else:
+        assert not can_has(name, image, *args, **kwargs)
 
 
 # ---- Invariant 3: Shape/ndim of returned value matches scikit-image ----
@@ -416,6 +520,12 @@ def test_invariant_shape_match_segmentation_result(
         ref = _skimage_reference_result(name, (np_a, np_b), args, kwargs)
         cp_a, cp_b = cupy.array(np_a), cupy.array(np_b)
         result = impl(cp_a, cp_b, *args, **kwargs)
+    elif "mark_boundaries" in name:
+        np_im = np.asarray(cupy.asnumpy(a)).astype(np.float64)
+        np_lbl = (np.asarray(cupy.asnumpy(b)) * 3).astype(np.int32)
+        ref = _skimage_reference_result(name, (np_im, np_lbl), args, kwargs)
+        cp_im, cp_lbl = cupy.array(np_im), cupy.array(np_lbl)
+        result = impl(cp_im, cp_lbl, *args, **kwargs)
     else:
         ref = _skimage_reference_result(name, (np_a,), args, kwargs)
         cp_a = cupy.array(np_a)
@@ -430,6 +540,109 @@ def test_invariant_shape_match_segmentation_result(
         assert isinstance(result, cupy.ndarray)
         assert result.shape == expected_shape
         assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", UTIL_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_util_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for util output."""
+    impl = get_implementation(name)
+    a, b = minimal_cupy_arrays_2d
+    np_a = np.asarray(cupy.asnumpy(a))
+    if "compare_images" in name:
+        np_b = np.asarray(cupy.asnumpy(b))
+        ref = _skimage_reference_result(name, (np_a, np_b), args, kwargs)
+        cp_a, cp_b = cupy.array(np_a), cupy.array(np_b)
+        result = impl(cp_a, cp_b, *args, **kwargs)
+    elif "montage" in name:
+        # Montage expects (K, M, N); use (4, 5, 5) from 2d arrays
+        np_montage = np.stack([np_a, np_a, np_a, np_a], axis=0)
+        ref = _skimage_reference_result(name, (np_montage,), args, kwargs)
+        cp_montage = cupy.array(np_montage)
+        result = impl(cp_montage, *args, **kwargs)
+    elif "view_as_blocks" in name or "view_as_windows" in name:
+        # (6, 6) divisible by (2, 2)
+        np_arr = np.random.rand(6, 6).astype(np.float64)
+        ref = _skimage_reference_result(name, (np_arr,), args, kwargs)
+        cp_arr = cupy.array(np_arr)
+        result = impl(cp_arr, *args, **kwargs)
+    else:
+        ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+        cp_a = cupy.array(np_a)
+        result = impl(cp_a, *args, **kwargs)
+    expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", COLOR_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_color_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for color output."""
+    impl = get_implementation(name)
+    a, _ = minimal_cupy_arrays_2d
+    np_a = np.asarray(cupy.asnumpy(a))
+    if "rgb2gray" in name or "rgb2hsv" in name or "rgb2lab" in name:
+        np_in = np.stack([np_a, np_a, np_a], axis=-1)
+        ref = _skimage_reference_result(name, (np_in,), args, kwargs)
+        cp_in = cupy.array(np_in)
+        result = impl(cp_in, *args, **kwargs)
+    elif "gray2rgb" in name:
+        ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+        cp_in = cupy.array(np_a)
+        result = impl(cp_in, *args, **kwargs)
+    elif "hsv2rgb" in name:
+        np_in = np.stack([np_a, np_a, np_a], axis=-1)
+        ref = _skimage_reference_result(name, (np_in,), args, kwargs)
+        cp_in = cupy.array(np_in)
+        result = impl(cp_in, *args, **kwargs)
+    elif "lab2rgb" in name:
+        # In-gamut LAB (from sRGB) to avoid clip/warning
+        rng = np.random.default_rng(42)
+        rgb = np.asarray(rng.random((5, 5, 3), dtype=np.float64))
+        np_in = _color.rgb2lab(rgb)
+        ref = _skimage_reference_result(name, (np_in,), args, kwargs)
+        cp_in = cupy.array(np_in)
+        result = impl(cp_in, *args, **kwargs)
+    else:
+        np_label = (np_a * 3).astype(np.int32)
+        ref = _skimage_reference_result(name, (np_label,), args, kwargs)
+        cp_label = cupy.array(np_label)
+        result = impl(cp_label, *args, **kwargs)
+    expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize("name,args,kwargs", RESTORATION_INVARIANT_CALL_PARAMS)
+def test_invariant_shape_match_restoration_result(
+    name, args, kwargs, cupy, minimal_cupy_arrays_2d
+):
+    """Backend return shape/ndim matches scikit-image for restoration output."""
+    impl = get_implementation(name)
+    a, b = minimal_cupy_arrays_2d
+    np_a = np.asarray(cupy.asnumpy(a)).astype(np.float64)
+    if "richardson_lucy" in name:
+        np_psf = np.ones((3, 3)) / 9.0
+        ref = _skimage_reference_result(name, (np_a, np_psf), args, kwargs)
+        cp_a = cupy.array(np_a)
+        cp_psf = cupy.array(np_psf)
+        result = impl(cp_a, cp_psf, *args, **kwargs)
+    else:
+        ref = _skimage_reference_result(name, (np_a,), args, kwargs)
+        cp_a = cupy.array(np_a)
+        result = impl(cp_a, *args, **kwargs)
+    expected_shape, expected_ndim = _expected_shape_and_ndim(ref)
+    assert isinstance(result, cupy.ndarray)
+    assert result.shape == expected_shape
+    assert result.ndim == expected_ndim
 
 
 @pytest.mark.cupy

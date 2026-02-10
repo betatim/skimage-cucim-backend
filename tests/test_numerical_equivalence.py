@@ -17,6 +17,9 @@ import skimage.segmentation as _segmentation
 import skimage.measure as _measure
 import skimage.transform as _transform
 import skimage.filters as _filters
+import skimage.util as _util
+import skimage.color as _color
+import skimage.restoration as _restoration
 
 # Suppress "dispatched to backend" warnings in this module; they add noise when we expect dispatch.
 pytestmark = pytest.mark.filterwarnings(
@@ -73,6 +76,13 @@ def _make_one_image(seed, xp):
     return (im,)
 
 
+def _make_6x6_image(seed, xp):
+    """One image (im,) of shape (6, 6), float64; for view_as_blocks/windows (2,2)."""
+    rng = np.random.default_rng(seed)
+    im = xp.asarray(rng.random((6, 6), dtype=np.float64))
+    return (im,)
+
+
 def _make_image_and_template(seed, xp):
     """Image (7, 7) and template (3, 3) for match_template."""
     rng = np.random.default_rng(seed)
@@ -101,6 +111,53 @@ def _make_two_label_images(seed, xp):
     s1 = xp.asarray((rng.random((7, 7)) * 4).astype(np.int32))
     s2 = xp.asarray((rng.random((7, 7)) * 3).astype(np.int32))
     return (s1, s2)
+
+
+def _make_image_and_label_image(seed, xp):
+    """Image (7, 7) float and label image (7, 7) int for mark_boundaries."""
+    rng = np.random.default_rng(seed)
+    image = xp.asarray(rng.random((7, 7), dtype=np.float64))
+    labels = xp.asarray((rng.random((7, 7)) * 4).astype(np.int32))
+    return (image, labels)
+
+
+def _make_montage_array(seed, xp):
+    """Array (4, 5, 5) for montage: 4 images of 5x5."""
+    rng = np.random.default_rng(seed)
+    arr = xp.asarray(rng.random((4, 5, 5), dtype=np.float64))
+    return (arr,)
+
+
+def _make_rgb_image(seed, xp):
+    """RGB image (7, 7, 3) for rgb2gray, rgb2hsv, rgb2lab."""
+    rng = np.random.default_rng(seed)
+    arr = xp.asarray(rng.random((7, 7, 3), dtype=np.float64))
+    return (arr,)
+
+
+def _make_hsv_image(seed, xp):
+    """HSV image (7, 7, 3) for hsv2rgb; H,S,V in [0, 1]."""
+    rng = np.random.default_rng(seed)
+    arr = xp.asarray(rng.random((7, 7, 3), dtype=np.float64))
+    return (arr,)
+
+
+def _make_lab_image(seed, xp):
+    """Lab image (7, 7, 3) for lab2rgb; derived from sRGB so in-gamut (no clip/warning)."""
+    rng = np.random.default_rng(seed)
+    rgb = np.asarray(rng.random((7, 7, 3), dtype=np.float64))
+    lab = _color.rgb2lab(
+        rgb
+    )  # in-gamut LAB; same illuminant/observer as lab2rgb default
+    return (xp.asarray(lab),)
+
+
+def _make_image_and_psf(seed, xp):
+    """Image (7, 7) and PSF (3, 3) for richardson_lucy."""
+    rng = np.random.default_rng(seed)
+    image = xp.asarray(rng.random((7, 7), dtype=np.float64))
+    psf = xp.asarray(np.ones((3, 3)) / 9.0, dtype=np.float64)
+    return (image, psf)
 
 
 # ---- Metrics: f(im1, im2) ----
@@ -223,6 +280,45 @@ SEGMENTATION_TWO_ARRAY_CALLABLES = [
     ("join_segmentations", partial(_segmentation.join_segmentations)),
 ]
 
+# Segmentation with (image, label_image): f(image, label_img) -> result.
+SEGMENTATION_IMAGE_LABEL_CALLABLES = [
+    ("mark_boundaries", partial(_segmentation.mark_boundaries)),
+]
+
+# Util: f(image) -> result or f(im0, im1) -> result.
+UTIL_CALLABLES = [
+    ("invert", partial(_util.invert)),
+    ("montage", partial(_util.montage)),
+    ("crop", partial(_util.crop, crop_width=1)),
+    ("random_noise", partial(_util.random_noise)),
+    ("view_as_blocks", partial(_util.view_as_blocks, block_shape=(2, 2))),
+    ("view_as_windows", partial(_util.view_as_windows, window_shape=(2, 2))),
+]
+# random_noise output is stochastic; we only check shape/type, not allclose.
+_UTIL_SKIP_ALLCLOSE = {"random_noise"}
+UTIL_TWO_ARRAY_CALLABLES = [
+    ("compare_images", partial(_util.compare_images)),
+]
+
+# Color: f(image) -> result. rgb2gray RGB in; gray2rgb gray in; label2rgb label in.
+COLOR_CALLABLES = [
+    ("rgb2gray", partial(_color.rgb2gray)),
+    ("gray2rgb", partial(_color.gray2rgb)),
+    ("label2rgb", partial(_color.label2rgb)),
+    ("rgb2hsv", partial(_color.rgb2hsv)),
+    ("hsv2rgb", partial(_color.hsv2rgb)),
+    ("rgb2lab", partial(_color.rgb2lab)),
+    ("lab2rgb", partial(_color.lab2rgb)),
+]
+
+# Restoration: f(image) or f(image, psf).
+RESTORATION_CALLABLES = [
+    ("denoise_tv_chambolle", partial(_restoration.denoise_tv_chambolle)),
+]
+RESTORATION_IMAGE_PSF_CALLABLES = [
+    ("richardson_lucy", partial(_restoration.richardson_lucy, num_iter=5)),
+]
+
 # Measure: f(image) -> result; label uses label image.
 MEASURE_CALLABLES = [
     ("label", partial(_measure.label)),
@@ -288,6 +384,30 @@ def _numerical_equivalence_covered_dispatch_names():
         if name:
             covered.add(name)
     for _scenario_id, func in SEGMENTATION_TWO_ARRAY_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in SEGMENTATION_IMAGE_LABEL_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in UTIL_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in UTIL_TWO_ARRAY_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in COLOR_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in RESTORATION_CALLABLES:
+        name = _dispatch_name_from_callable(func)
+        if name:
+            covered.add(name)
+    for _scenario_id, func in RESTORATION_IMAGE_PSF_CALLABLES:
         name = _dispatch_name_from_callable(func)
         if name:
             covered.add(name)
@@ -454,6 +574,136 @@ def test_numerical_equivalence_f_im_segmentation_two_arrays(
         _assert_allclose(ref[0], out[0], cupy, atol=atol)
     else:
         _assert_allclose(ref, out, cupy, atol=atol)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    SEGMENTATION_IMAGE_LABEL_CALLABLES,
+    ids=[p[0] for p in SEGMENTATION_IMAGE_LABEL_CALLABLES],
+)
+def test_numerical_equivalence_f_im_segmentation_image_label(
+    scenario_id, func, cupy, require_cuda
+):
+    """NumPy vs CuPy (dispatched) numerical equivalence for segmentation f(image, label_image)."""
+    np_arrays = _make_image_and_label_image(_SEED, np)
+    cp_arrays = _make_image_and_label_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    atol = _SEGMENTATION_ATOL.get(scenario_id, _ATOL)
+    _assert_allclose(ref, out, cupy, atol=atol)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    UTIL_CALLABLES,
+    ids=[p[0] for p in UTIL_CALLABLES],
+)
+def test_numerical_equivalence_f_im_util(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for util f(image)."""
+    if scenario_id == "montage":
+        np_arrays = _make_montage_array(_SEED, np)
+        cp_arrays = _make_montage_array(_SEED, cupy)
+    elif scenario_id in ("view_as_blocks", "view_as_windows"):
+        np_arrays = _make_6x6_image(_SEED, np)
+        cp_arrays = _make_6x6_image(_SEED, cupy)
+    else:
+        np_arrays = _make_one_image(_SEED, np)
+        cp_arrays = _make_one_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    if scenario_id not in _UTIL_SKIP_ALLCLOSE:
+        _assert_allclose(ref, out, cupy)
+    else:
+        assert out.shape == ref.shape, "random_noise: shape must match"
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    UTIL_TWO_ARRAY_CALLABLES,
+    ids=[p[0] for p in UTIL_TWO_ARRAY_CALLABLES],
+)
+def test_numerical_equivalence_f_im_util_two_arrays(
+    scenario_id, func, cupy, require_cuda
+):
+    """NumPy vs CuPy (dispatched) numerical equivalence for util f(im0, im1)."""
+    np_arrays = _make_two_arrays(_SEED, np)
+    cp_arrays = _make_two_arrays(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    COLOR_CALLABLES,
+    ids=[p[0] for p in COLOR_CALLABLES],
+)
+def test_numerical_equivalence_f_im_color(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for color f(image)."""
+    if (
+        scenario_id == "rgb2gray"
+        or scenario_id == "rgb2hsv"
+        or scenario_id == "rgb2lab"
+    ):
+        np_arrays = _make_rgb_image(_SEED, np)
+        cp_arrays = _make_rgb_image(_SEED, cupy)
+    elif scenario_id == "gray2rgb":
+        np_arrays = _make_one_image(_SEED, np)
+        cp_arrays = _make_one_image(_SEED, cupy)
+    elif scenario_id == "hsv2rgb":
+        np_arrays = _make_hsv_image(_SEED, np)
+        cp_arrays = _make_hsv_image(_SEED, cupy)
+    elif scenario_id == "lab2rgb":
+        np_arrays = _make_lab_image(_SEED, np)
+        cp_arrays = _make_lab_image(_SEED, cupy)
+    else:
+        np_arrays = _make_label_image(_SEED, np)
+        cp_arrays = _make_label_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    RESTORATION_CALLABLES,
+    ids=[p[0] for p in RESTORATION_CALLABLES],
+)
+def test_numerical_equivalence_f_im_restoration(scenario_id, func, cupy, require_cuda):
+    """NumPy vs CuPy (dispatched) numerical equivalence for restoration f(image)."""
+    np_arrays = _make_one_image(_SEED, np)
+    cp_arrays = _make_one_image(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
+
+
+@pytest.mark.cupy
+@pytest.mark.parametrize(
+    "scenario_id,func",
+    RESTORATION_IMAGE_PSF_CALLABLES,
+    ids=[p[0] for p in RESTORATION_IMAGE_PSF_CALLABLES],
+)
+def test_numerical_equivalence_f_im_restoration_image_psf(
+    scenario_id, func, cupy, require_cuda
+):
+    """NumPy vs CuPy (dispatched) numerical equivalence for restoration f(image, psf)."""
+    np_arrays = _make_image_and_psf(_SEED, np)
+    cp_arrays = _make_image_and_psf(_SEED, cupy)
+    ref = func(*np_arrays)
+    out = func(*cp_arrays)
+    _assert_result_is_cupy(out, cupy)
+    _assert_allclose(ref, out, cupy)
 
 
 @pytest.mark.cupy

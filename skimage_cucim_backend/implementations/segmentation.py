@@ -41,3 +41,23 @@ def join_segmentations(s1, s2, return_mapping=False):
 def relabel_sequential(label_field, offset=1):
     """CuCIM-backed relabel_sequential; same signature as skimage.segmentation.relabel_sequential."""
     return cucim_segmentation.relabel_sequential(label_field, offset=offset)
+
+
+def mark_boundaries(
+    image,
+    label_img,
+    color=(1, 1, 0),
+    outline_color=None,
+    mode="outer",
+    background_label=0,
+):
+    """CuCIM-backed mark_boundaries; same signature as skimage.segmentation.mark_boundaries."""
+    return cucim_segmentation.mark_boundaries(
+        image,
+        label_img,
+        color=color,
+        outline_color=outline_color,
+        mode=mode,
+        background_label=background_label,
+        order=3,
+    )

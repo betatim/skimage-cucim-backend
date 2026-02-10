@@ -100,6 +100,9 @@ def get_implementation(name):
         "morphology",
         "segmentation",
         "measure",
+        "util",
+        "color",
+        "restoration",
     ):
         mod = importlib.import_module(
             f"skimage_cucim_backend.implementations.{module_path}"
